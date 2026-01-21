@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Timing Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    .hidden { display: none; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #f2f2f2; }
+    button { margin-right: 10px; }
+  </style>
+</head>
+
+<body>
+<h2>Timing Analysis Dashboard</h2>
+
+<button onclick="showTable()">Table View</button>
+<button onclick="showChart()">Chart View</button>
+
+<div id="tableView">
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Begin Clock</th>
+        <th>End Clock</th>
+        <th>Slack</th>
+        <th>Status</th>
+        <th>Ingestion Time</th>
+      </tr>
+    </thead>
+    <tbody id="data-body"></tbody>
+  </table>
+</div>
+
+<div id="chartView" class="hidden">
+  <canvas id="slackChart"></canvas>
+</div>
+
+<script src="/static/script.js"></script>
+</body>
+</html>
