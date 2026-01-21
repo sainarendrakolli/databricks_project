@@ -1,4 +1,4 @@
-fastapi
-uvicorn
-databricks-sql-connector
-python-dotenv
+fastapi==0.110.0
+uvicorn==0.29.0
+databricks-sql-connector==3.0.3
+python-dotenv==1.0.1
