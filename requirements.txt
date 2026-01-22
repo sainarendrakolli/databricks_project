@@ -2,4 +2,4 @@ fastapi==0.110.0
 uvicorn==0.27.1
 databricks-sql-connector==3.5.0
 pandas==2.1.4
-python-dotenv==1.0.1
+python-dotenv==1.0.
