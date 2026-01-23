@@ -1,13 +1,12 @@
+import os
 from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from databricks import sql
-import os
 
 app = FastAPI(title="Databricks Timing Dashboard")
 
@@ -22,10 +21,16 @@ app.add_middleware(
 )
 
 # -----------------------
-# STATIC FILES
+# STATIC FILES (SAFE)
 # -----------------------
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+if os.path.isdir("static"):
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# -----------------------
+# TEMPLATES (SAFE)
+# -----------------------
+templates = Jinja2Templates(directory="templates") if os.path.isdir("templates") else None
 
 # -----------------------
 # ENV VARIABLES
@@ -39,7 +44,9 @@ ACCESS_TOKEN = os.getenv("DATABRICKS_TOKEN")
 # -----------------------
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    if templates:
+        return templates.TemplateResponse("index.html", {"request": request})
+    return HTMLResponse("<h3>API is running</h3>")
 
 # -----------------------
 # API ENDPOINT
