@@ -1,6 +1,12 @@
 let slackChart, statusChart;
 let rawData = [];
 
+/* ---------- HELPERS ---------- */
+function normalizeStatus(status) {
+  return status ? status.trim().toUpperCase() : "";
+}
+
+/* ---------- TAB HANDLING ---------- */
 function showDashboard() {
   toggleTabs(0);
   document.getElementById("dashboard").classList.remove("hidden");
@@ -14,11 +20,12 @@ function showTable() {
 }
 
 function toggleTabs(index) {
-  document.querySelectorAll(".tab").forEach((t, i) =>
-    t.classList.toggle("active", i === index)
+  document.querySelectorAll(".tab").forEach((tab, i) =>
+    tab.classList.toggle("active", i === index)
   );
 }
 
+/* ---------- DATA LOAD ---------- */
 async function loadData() {
   const res = await fetch("/timing-data");
   rawData = await res.json();
@@ -28,42 +35,53 @@ async function loadData() {
   renderCharts();
 }
 
+/* ---------- KPI UPDATE ---------- */
 function updateKPIs() {
   document.getElementById("totalPaths").innerText = rawData.length;
 
-  const violations = rawData.filter(d => d.timing_status === "VIOLATED").length;
+  const violations = rawData.filter(
+    d => normalizeStatus(d.timing_status) === "VIOLATED"
+  ).length;
+
   document.getElementById("violations").innerText = violations;
 
-  const avgSlack = (
-    rawData.reduce((s, d) => s + d.slack, 0) / rawData.length
-  ).toFixed(2);
+  const avgSlack = rawData.length
+    ? (
+        rawData.reduce((sum, d) => sum + Number(d.slack || 0), 0) / rawData.length
+      ).toFixed(2)
+    : 0;
 
   document.getElementById("avgSlack").innerText = avgSlack;
 }
 
+/* ---------- TABLE ---------- */
 function renderTable() {
   const body = document.getElementById("data-body");
   body.innerHTML = "";
 
   rawData.forEach(d => {
+    const status = normalizeStatus(d.timing_status);
+
     body.innerHTML += `
       <tr>
         <td>${d.id}</td>
         <td>${d.begin_clock}</td>
         <td>${d.end_clock}</td>
         <td>${d.slack}</td>
-        <td><span class="status ${d.timing_status}">${d.timing_status}</span></td>
+        <td><span class="status ${status}">${status}</span></td>
         <td>${d.ingestion_ts}</td>
       </tr>
     `;
   });
 }
 
+/* ---------- CHARTS ---------- */
 function renderCharts() {
   if (slackChart) slackChart.destroy();
   if (statusChart) statusChart.destroy();
 
-  slackChart = new Chart(slackChartCanvas(), {
+  // Slack Trend
+  slackChart = new Chart(document.getElementById("slackChart"), {
     type: "line",
     data: {
       labels: rawData.map(d => d.id),
@@ -75,15 +93,19 @@ function renderCharts() {
         tension: 0.4
       }]
     },
-    options: { plugins: { legend: { display: false } } }
+    options: {
+      plugins: { legend: { display: false } }
+    }
   });
 
+  // Status Distribution
   const statusCount = {};
   rawData.forEach(d => {
-    statusCount[d.timing_status] = (statusCount[d.timing_status] || 0) + 1;
+    const s = normalizeStatus(d.timing_status);
+    statusCount[s] = (statusCount[s] || 0) + 1;
   });
 
-  statusChart = new Chart(statusChartCanvas(), {
+  statusChart = new Chart(document.getElementById("statusChart"), {
     type: "doughnut",
     data: {
       labels: Object.keys(statusCount),
@@ -95,13 +117,6 @@ function renderCharts() {
   });
 }
 
-function slackChartCanvas() {
-  return document.getElementById("slackChart");
-}
-
-function statusChartCanvas() {
-  return document.getElementById("statusChart");
-}
-
+/* ---------- AUTO REFRESH ---------- */
 loadData();
 setInterval(loadData, 30000);

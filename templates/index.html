@@ -2,9 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Timing Analytics</title>
+  <title>Timing Analytics Dashboard</title>
 
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Font -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
   <style>
@@ -25,8 +28,10 @@
 
     .tabs {
       display: flex;
-      gap: 20px;
-      padding: 20px 30px;
+      gap: 25px;
+      padding: 18px 30px;
+      background: white;
+      border-bottom: 1px solid #eee;
     }
 
     .tab {
@@ -38,18 +43,18 @@
     .tab.active {
       color: #4f46e5;
       border-bottom: 3px solid #4f46e5;
-      padding-bottom: 5px;
+      padding-bottom: 6px;
     }
 
     .container {
-      padding: 0 30px 30px;
+      padding: 25px;
       max-width: 1300px;
       margin: auto;
     }
 
     .hidden { display: none; }
 
-    /* KPI cards */
+    /* KPI Cards */
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -59,14 +64,14 @@
 
     .kpi {
       background: white;
-      padding: 20px;
+      padding: 22px;
       border-radius: 14px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.08);
     }
 
     .kpi h2 {
       margin: 0;
-      font-size: 26px;
+      font-size: 28px;
     }
 
     .kpi span {
@@ -160,7 +165,7 @@
       </div>
       <div class="kpi">
         <h2 id="avgSlack">0</h2>
-        <span>Avg Slack</span>
+        <span>Average Slack</span>
       </div>
     </div>
 
@@ -183,11 +188,11 @@
       <thead>
         <tr>
           <th>ID</th>
-          <th>Begin</th>
-          <th>End</th>
+          <th>Begin Clock</th>
+          <th>End Clock</th>
           <th>Slack</th>
           <th>Status</th>
-          <th>Ingestion</th>
+          <th>Ingestion Time</th>
         </tr>
       </thead>
       <tbody id="data-body"></tbody>
