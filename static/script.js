@@ -1,56 +1,76 @@
-let chart;
+let slackChart;
+let statusChart;
 
 async function loadData() {
-    const response = await fetch("/timing-data");
-    const data = await response.json();
+  const res = await fetch("/timing-data");
+  const data = await res.json();
 
-    // -------- TABLE --------
-    const tableBody = document.getElementById("data-body");
-    tableBody.innerHTML = "";
+  // -------- TABLE --------
+  const body = document.getElementById("data-body");
+  body.innerHTML = "";
 
-    data.forEach(row => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${row.id}</td>
-            <td>${row.begin_clock}</td>
-            <td>${row.end_clock}</td>
-            <td>${row.slack}</td>
-            <td>${row.timing_status}</td>
-            <td>${row.ingestion_ts}</td>
-        `;
-        tableBody.appendChild(tr);
-    });
+  data.forEach(row => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${row.id}</td>
+      <td>${row.begin_clock}</td>
+      <td>${row.end_clock}</td>
+      <td>${row.slack}</td>
+      <td>
+        <span class="status ${row.timing_status}">
+          ${row.timing_status}
+        </span>
+      </td>
+      <td>${row.ingestion_ts}</td>
+    `;
+    body.appendChild(tr);
+  });
 
-    // -------- CHART --------
-    const labels = data.map(r => r.id);
-    const slacks = data.map(r => r.slack);
+  // -------- SLACK TREND --------
+  const labels = data.map(d => d.id);
+  const slackValues = data.map(d => d.slack);
 
-    if (chart) chart.destroy();
+  if (slackChart) slackChart.destroy();
 
-    const ctx = document.getElementById("slackChart");
-    chart = new Chart(ctx, {
-        type: "line",
-        data: {
-            labels,
-            datasets: [{
-                label: "Slack",
-                data: slacks,
-                borderColor: "blue",
-                fill: false
-            }]
-        }
-    });
+  slackChart = new Chart(document.getElementById("slackChart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "Slack",
+        data: slackValues,
+        borderColor: "#4f46e5",
+        backgroundColor: "rgba(79,70,229,0.15)",
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // -------- STATUS DISTRIBUTION --------
+  const statusCount = {};
+  data.forEach(d => {
+    statusCount[d.timing_status] = (statusCount[d.timing_status] || 0) + 1;
+  });
+
+  if (statusChart) statusChart.destroy();
+
+  statusChart = new Chart(document.getElementById("statusChart"), {
+    type: "doughnut",
+    data: {
+      labels: Object.keys(statusCount),
+      datasets: [{
+        data: Object.values(statusCount),
+        backgroundColor: ["#22c55e", "#ef4444"]
+      }]
+    }
+  });
 }
 
-function showTable() {
-    document.getElementById("tableView").classList.remove("hidden");
-    document.getElementById("chartView").classList.add("hidden");
-}
-
-function showChart() {
-    document.getElementById("chartView").classList.remove("hidden");
-    document.getElementById("tableView").classList.add("hidden");
-}
-
+// Auto refresh
 loadData();
 setInterval(loadData, 30000);

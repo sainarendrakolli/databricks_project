@@ -1,44 +1,145 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Timing Dashboard</title>
+  <meta charset="UTF-8" />
+  <title>Timing Analysis Dashboard</title>
+
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
   <style>
-    body { font-family: Arial; margin: 20px; }
-    .hidden { display: none; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ddd; padding: 8px; }
-    th { background: #f2f2f2; }
-    button { margin-right: 10px; }
+    body {
+      font-family: "Inter", sans-serif;
+      background: #f4f6fb;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .dashboard {
+      max-width: 1300px;
+      margin: auto;
+    }
+
+    /* Cards */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    /* Grid for charts */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      text-align: left;
+      padding: 12px;
+      background: #f0f2f8;
+      color: #333;
+    }
+
+    td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    tr:hover {
+      background: #f9fafc;
+    }
+
+    .status {
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      display: inline-block;
+    }
+
+    .OK {
+      background: #e6f9f0;
+      color: #1e9d61;
+    }
+
+    .VIOLATED {
+      background: #ffeaea;
+      color: #d93025;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 20px;
+      color: #888;
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 
 <body>
-<h2>Timing Analysis Dashboard</h2>
+  <div class="dashboard">
+    <h1>⏱ Timing Analysis Dashboard</h1>
+    <p>Real-time view of timing slack, status & ingestion trends</p>
 
-<button onclick="showTable()">Table View</button>
-<button onclick="showChart()">Chart View</button>
+    <!-- Charts -->
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Slack Trend</h3>
+        <canvas id="slackChart"></canvas>
+      </div>
 
-<div id="tableView">
-  <table>
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Begin Clock</th>
-        <th>End Clock</th>
-        <th>Slack</th>
-        <th>Status</th>
-        <th>Ingestion Time</th>
-      </tr>
-    </thead>
-    <tbody id="data-body"></tbody>
-  </table>
-</div>
+      <div class="card">
+        <h3>Status Distribution</h3>
+        <canvas id="statusChart"></canvas>
+      </div>
+    </div>
 
-<div id="chartView" class="hidden">
-  <canvas id="slackChart"></canvas>
-</div>
+    <!-- Table -->
+    <div class="card">
+      <h3>Timing Details</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Begin Clock</th>
+            <th>End Clock</th>
+            <th>Slack</th>
+            <th>Status</th>
+            <th>Ingestion Time</th>
+          </tr>
+        </thead>
+        <tbody id="data-body"></tbody>
+      </table>
+    </div>
 
-<script src="/static/script.js"></script>
+    <footer>
+      Powered by FastAPI & Databricks
+    </footer>
+  </div>
+
+  <script src="/static/script.js"></script>
 </body>
 </html>
