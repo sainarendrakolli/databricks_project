@@ -1,65 +1,89 @@
-let slackChart;
-let statusChart;
+let slackChart, statusChart;
+let rawData = [];
+
+function showDashboard() {
+  toggleTabs(0);
+  document.getElementById("dashboard").classList.remove("hidden");
+  document.getElementById("tableView").classList.add("hidden");
+}
+
+function showTable() {
+  toggleTabs(1);
+  document.getElementById("dashboard").classList.add("hidden");
+  document.getElementById("tableView").classList.remove("hidden");
+}
+
+function toggleTabs(index) {
+  document.querySelectorAll(".tab").forEach((t, i) =>
+    t.classList.toggle("active", i === index)
+  );
+}
 
 async function loadData() {
   const res = await fetch("/timing-data");
-  const data = await res.json();
+  rawData = await res.json();
 
-  // -------- TABLE --------
+  updateKPIs();
+  renderTable();
+  renderCharts();
+}
+
+function updateKPIs() {
+  document.getElementById("totalPaths").innerText = rawData.length;
+
+  const violations = rawData.filter(d => d.timing_status === "VIOLATED").length;
+  document.getElementById("violations").innerText = violations;
+
+  const avgSlack = (
+    rawData.reduce((s, d) => s + d.slack, 0) / rawData.length
+  ).toFixed(2);
+
+  document.getElementById("avgSlack").innerText = avgSlack;
+}
+
+function renderTable() {
   const body = document.getElementById("data-body");
   body.innerHTML = "";
 
-  data.forEach(row => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${row.id}</td>
-      <td>${row.begin_clock}</td>
-      <td>${row.end_clock}</td>
-      <td>${row.slack}</td>
-      <td>
-        <span class="status ${row.timing_status}">
-          ${row.timing_status}
-        </span>
-      </td>
-      <td>${row.ingestion_ts}</td>
+  rawData.forEach(d => {
+    body.innerHTML += `
+      <tr>
+        <td>${d.id}</td>
+        <td>${d.begin_clock}</td>
+        <td>${d.end_clock}</td>
+        <td>${d.slack}</td>
+        <td><span class="status ${d.timing_status}">${d.timing_status}</span></td>
+        <td>${d.ingestion_ts}</td>
+      </tr>
     `;
-    body.appendChild(tr);
   });
+}
 
-  // -------- SLACK TREND --------
-  const labels = data.map(d => d.id);
-  const slackValues = data.map(d => d.slack);
-
+function renderCharts() {
   if (slackChart) slackChart.destroy();
+  if (statusChart) statusChart.destroy();
 
-  slackChart = new Chart(document.getElementById("slackChart"), {
+  slackChart = new Chart(slackChartCanvas(), {
     type: "line",
     data: {
-      labels,
+      labels: rawData.map(d => d.id),
       datasets: [{
-        label: "Slack",
-        data: slackValues,
+        data: rawData.map(d => d.slack),
         borderColor: "#4f46e5",
-        backgroundColor: "rgba(79,70,229,0.15)",
+        backgroundColor: "rgba(79,70,229,0.12)",
         fill: true,
         tension: 0.4
       }]
     },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } }
-    }
+    options: { plugins: { legend: { display: false } } }
   });
 
-  // -------- STATUS DISTRIBUTION --------
   const statusCount = {};
-  data.forEach(d => {
+  rawData.forEach(d => {
     statusCount[d.timing_status] = (statusCount[d.timing_status] || 0) + 1;
   });
 
-  if (statusChart) statusChart.destroy();
-
-  statusChart = new Chart(document.getElementById("statusChart"), {
+  statusChart = new Chart(statusChartCanvas(), {
     type: "doughnut",
     data: {
       labels: Object.keys(statusCount),
@@ -71,6 +95,13 @@ async function loadData() {
   });
 }
 
-// Auto refresh
+function slackChartCanvas() {
+  return document.getElementById("slackChart");
+}
+
+function statusChartCanvas() {
+  return document.getElementById("statusChart");
+}
+
 loadData();
 setInterval(loadData, 30000);
