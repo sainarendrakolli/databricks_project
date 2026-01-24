@@ -54,24 +54,43 @@ function updateKPIs() {
   document.getElementById("avgSlack").innerText = avgSlack;
 }
 
-/* ---------- TABLE ---------- */
+/* ---------- TABLE (ALL GOLD COLUMNS) ---------- */
 function renderTable() {
   const body = document.getElementById("data-body");
+  const head = document.getElementById("tableHead");
+
   body.innerHTML = "";
+  head.innerHTML = "";
 
+  if (!rawData.length) return;
+
+  const columns = Object.keys(rawData[0]);
+
+  // Header
+  let headerRow = "<tr>";
+  columns.forEach(col => {
+    headerRow += `<th>${col}</th>`;
+  });
+  headerRow += "</tr>";
+  head.innerHTML = headerRow;
+
+  // Rows
   rawData.forEach(d => {
-    const status = normalizeStatus(d.timing_status);
+    let rowHtml = "<tr>";
 
-    body.innerHTML += `
-      <tr>
-        <td>${d.id}</td>
-        <td>${d.begin_clock}</td>
-        <td>${d.end_clock}</td>
-        <td>${d.slack}</td>
-        <td><span class="status ${status}">${status}</span></td>
-        <td>${d.ingestion_ts}</td>
-      </tr>
-    `;
+    columns.forEach(col => {
+      let value = d[col] ?? "";
+
+      if (col === "timing_status") {
+        const status = normalizeStatus(value);
+        value = `<span class="status ${status}">${status}</span>`;
+      }
+
+      rowHtml += `<td>${value}</td>`;
+    });
+
+    rowHtml += "</tr>";
+    body.innerHTML += rowHtml;
   });
 }
 
@@ -80,7 +99,6 @@ function renderCharts() {
   if (slackChart) slackChart.destroy();
   if (statusChart) statusChart.destroy();
 
-  // Slack Trend
   slackChart = new Chart(document.getElementById("slackChart"), {
     type: "line",
     data: {
@@ -93,12 +111,9 @@ function renderCharts() {
         tension: 0.4
       }]
     },
-    options: {
-      plugins: { legend: { display: false } }
-    }
+    options: { plugins: { legend: { display: false } } }
   });
 
-  // Status Distribution
   const statusCount = {};
   rawData.forEach(d => {
     const s = normalizeStatus(d.timing_status);
