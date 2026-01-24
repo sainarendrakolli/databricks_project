@@ -1,122 +1,63 @@
-let slackChart, statusChart;
-let rawData = [];
-
-/* ---------- HELPERS ---------- */
-function normalizeStatus(status) {
-  return status ? status.trim().toUpperCase() : "";
-}
-
-/* ---------- TAB HANDLING ---------- */
-function showDashboard() {
-  toggleTabs(0);
-  document.getElementById("dashboard").classList.remove("hidden");
-  document.getElementById("tableView").classList.add("hidden");
-}
-
-function showTable() {
-  toggleTabs(1);
-  document.getElementById("dashboard").classList.add("hidden");
-  document.getElementById("tableView").classList.remove("hidden");
-}
-
-function toggleTabs(index) {
-  document.querySelectorAll(".tab").forEach((tab, i) =>
-    tab.classList.toggle("active", i === index)
-  );
-}
-
-/* ---------- DATA LOAD ---------- */
 async function loadData() {
-  const res = await fetch("/timing-data");
-  rawData = await res.json();
-
-  updateKPIs();
-  renderTable();
-  renderCharts();
+  try {
+    const response = await fetch("/timing-data");
+    const data = await response.json();
+    renderTable(data);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+  }
 }
 
-/* ---------- KPI UPDATE ---------- */
-function updateKPIs() {
-  document.getElementById("totalPaths").innerText = rawData.length;
+function renderTable(data) {
+  const tableHead = document.getElementById("tableHead");
+  const tableBody = document.getElementById("tableBody");
 
-  const violations = rawData.filter(
-    d => normalizeStatus(d.timing_status) === "VIOLATED"
-  ).length;
+  tableHead.innerHTML = "";
+  tableBody.innerHTML = "";
 
-  document.getElementById("violations").innerText = violations;
+  if (!data || data.length === 0) {
+    tableBody.innerHTML = `<tr><td class="empty">No data available</td></tr>`;
+    return;
+  }
 
-  const avgSlack = rawData.length
-    ? (
-        rawData.reduce((sum, d) => sum + Number(d.slack || 0), 0) / rawData.length
-      ).toFixed(2)
-    : 0;
+  // 🔹 Dynamically extract column names from Gold layer
+  const columns = Object.keys(data[0]);
 
-  document.getElementById("avgSlack").innerText = avgSlack;
-}
+  // 🔹 Build table header
+  const headerRow = document.createElement("tr");
+  columns.forEach(col => {
+    const th = document.createElement("th");
+    th.textContent = col.replaceAll("_", " ").toUpperCase();
+    headerRow.appendChild(th);
+  });
+  tableHead.appendChild(headerRow);
 
-/* ---------- TABLE ---------- */
-function renderTable() {
-  const body = document.getElementById("data-body");
-  body.innerHTML = "";
+  // 🔹 Build table rows
+  data.forEach(row => {
+    const tr = document.createElement("tr");
 
-  rawData.forEach(d => {
-    const status = normalizeStatus(d.timing_status);
+    columns.forEach(col => {
+      const td = document.createElement("td");
+      let value = row[col];
 
-    body.innerHTML += `
-      <tr>
-        <td>${d.id}</td>
-        <td>${d.begin_clock}</td>
-        <td>${d.end_clock}</td>
-        <td>${d.slack}</td>
-        <td><span class="status ${status}">${status}</span></td>
-        <td>${d.ingestion_ts}</td>
-      </tr>
-    `;
+      if (col === "timing_status") {
+        td.innerHTML =
+          value === "VIOLATED"
+            ? `<span class="badge badge-red">VIOLATED</span>`
+            : `<span class="badge badge-green">OK</span>`;
+      } else {
+        td.textContent = value !== null && value !== undefined ? value : "-";
+      }
+
+      tr.appendChild(td);
+    });
+
+    tableBody.appendChild(tr);
   });
 }
 
-/* ---------- CHARTS ---------- */
-function renderCharts() {
-  if (slackChart) slackChart.destroy();
-  if (statusChart) statusChart.destroy();
-
-  // Slack Trend
-  slackChart = new Chart(document.getElementById("slackChart"), {
-    type: "line",
-    data: {
-      labels: rawData.map(d => d.id),
-      datasets: [{
-        data: rawData.map(d => d.slack),
-        borderColor: "#4f46e5",
-        backgroundColor: "rgba(79,70,229,0.12)",
-        fill: true,
-        tension: 0.4
-      }]
-    },
-    options: {
-      plugins: { legend: { display: false } }
-    }
-  });
-
-  // Status Distribution
-  const statusCount = {};
-  rawData.forEach(d => {
-    const s = normalizeStatus(d.timing_status);
-    statusCount[s] = (statusCount[s] || 0) + 1;
-  });
-
-  statusChart = new Chart(document.getElementById("statusChart"), {
-    type: "doughnut",
-    data: {
-      labels: Object.keys(statusCount),
-      datasets: [{
-        data: Object.values(statusCount),
-        backgroundColor: ["#22c55e", "#ef4444"]
-      }]
-    }
-  });
-}
-
-/* ---------- AUTO REFRESH ---------- */
+// 🔁 Initial load
 loadData();
+
+// 🔁 Auto refresh every 30 seconds
 setInterval(loadData, 30000);
