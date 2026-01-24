@@ -4,10 +4,7 @@
   <meta charset="UTF-8" />
   <title>Timing Analytics Dashboard</title>
 
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- Font -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
   <style>
@@ -54,7 +51,6 @@
 
     .hidden { display: none; }
 
-    /* KPI Cards */
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -79,7 +75,6 @@
       color: #666;
     }
 
-    /* Charts */
     .chart-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -97,7 +92,6 @@
       max-height: 240px;
     }
 
-    /* Table */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -110,7 +104,6 @@
     th {
       background: #f0f2f8;
       padding: 14px;
-      text-align: left;
       font-size: 13px;
     }
 
@@ -119,8 +112,6 @@
       font-size: 13px;
       border-bottom: 1px solid #eee;
     }
-
-    tr:hover { background: #fafafa; }
 
     .status {
       padding: 4px 12px;
@@ -131,12 +122,6 @@
 
     .OK { background: #e6f9f0; color: #16a34a; }
     .VIOLATED { background: #fee2e2; color: #dc2626; }
-
-    @media(max-width: 900px) {
-      .kpi-grid, .chart-grid {
-        grid-template-columns: 1fr;
-      }
-    }
   </style>
 </head>
 
@@ -181,7 +166,7 @@
       </div>
 
       <div class="card">
-        <h3>Average Slack Trend</h3>
+        <h3>Average Slack by Path</h3>
         <canvas id="avgSlackChart"></canvas>
       </div>
 

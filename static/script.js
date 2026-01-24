@@ -6,100 +6,79 @@ function normalizeStatus(status) {
   return status ? status.trim().toUpperCase() : "";
 }
 
-/* ---------- TAB HANDLING ---------- */
+/* ---------- TABS ---------- */
 function showDashboard() {
   toggleTabs(0);
-  document.getElementById("dashboard").classList.remove("hidden");
-  document.getElementById("tableView").classList.add("hidden");
+  dashboard.classList.remove("hidden");
+  tableView.classList.add("hidden");
 }
 
 function showTable() {
   toggleTabs(1);
-  document.getElementById("dashboard").classList.add("hidden");
-  document.getElementById("tableView").classList.remove("hidden");
+  dashboard.classList.add("hidden");
+  tableView.classList.remove("hidden");
 }
 
-function toggleTabs(index) {
-  document.querySelectorAll(".tab").forEach((tab, i) =>
-    tab.classList.toggle("active", i === index)
+function toggleTabs(i) {
+  document.querySelectorAll(".tab").forEach((t, idx) =>
+    t.classList.toggle("active", idx === i)
   );
 }
 
 /* ---------- DATA LOAD ---------- */
 async function loadData() {
-  const res = await fetch("/timing-data");
-  rawData = await res.json();
-
+  rawData = await (await fetch("/timing-data")).json();
   updateKPIs();
   renderTable();
   renderCharts();
 }
 
-/* ---------- KPI UPDATE ---------- */
+/* ---------- KPI ---------- */
 function updateKPIs() {
-  document.getElementById("totalPaths").innerText = rawData.length;
-
-  const violations = rawData.filter(
-    d => normalizeStatus(d.timing_status) === "VIOLATED"
-  ).length;
-
-  document.getElementById("violations").innerText = violations;
-
-  const avgSlack = rawData.length
-    ? (
-        rawData.reduce((sum, d) => sum + Number(d.slack || 0), 0) / rawData.length
-      ).toFixed(2)
+  totalPaths.innerText = rawData.length;
+  violations.innerText = rawData.filter(d => d.slack < 0).length;
+  avgSlack.innerText = rawData.length
+    ? (rawData.reduce((s, d) => s + Number(d.slack), 0) / rawData.length).toFixed(2)
     : 0;
-
-  document.getElementById("avgSlack").innerText = avgSlack;
 }
 
-/* ---------- TABLE (ALL GOLD COLUMNS) ---------- */
+/* ---------- TABLE ---------- */
 function renderTable() {
-  const body = document.getElementById("data-body");
-  const head = document.getElementById("tableHead");
-
-  body.innerHTML = "";
-  head.innerHTML = "";
+  dataBody.innerHTML = "";
+  tableHead.innerHTML = "";
 
   if (!rawData.length) return;
 
-  const columns = Object.keys(rawData[0]);
+  const cols = Object.keys(rawData[0]);
+  tableHead.innerHTML = "<tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr>";
 
-  head.innerHTML =
-    "<tr>" + columns.map(c => `<th>${c}</th>`).join("") + "</tr>";
-
-  rawData.forEach(d => {
+  rawData.forEach(r => {
     let row = "<tr>";
-    columns.forEach(col => {
-      let val = d[col] ?? "";
-      if (col === "timing_status") {
-        const s = normalizeStatus(val);
-        val = `<span class="status ${s}">${s}</span>`;
+    cols.forEach(c => {
+      let v = r[c] ?? "";
+      if (c === "timing_status") {
+        v = `<span class="status ${normalizeStatus(v)}">${normalizeStatus(v)}</span>`;
       }
-      row += `<td>${val}</td>`;
+      row += `<td>${v}</td>`;
     });
     row += "</tr>";
-    body.innerHTML += row;
+    dataBody.innerHTML += row;
   });
 }
 
 /* ---------- CHARTS ---------- */
 function renderCharts() {
-  if (slackChart) slackChart.destroy();
-  if (statusChart) statusChart.destroy();
-  if (avgSlackChart) avgSlackChart.destroy();
-  if (violationTrendChart) violationTrendChart.destroy();
+  [slackChart, statusChart, avgSlackChart, violationTrendChart]
+    .forEach(c => c && c.destroy());
 
   /* Slack Trend */
-  slackChart = new Chart(document.getElementById("slackChart"), {
+  slackChart = new Chart(slackChartCanvas, {
     type: "line",
     data: {
       labels: rawData.map(d => d.id),
       datasets: [{
         data: rawData.map(d => d.slack),
         borderColor: "#4f46e5",
-        backgroundColor: "rgba(79,70,229,0.15)",
         fill: true,
         tension: 0.4
       }]
@@ -114,7 +93,7 @@ function renderCharts() {
     statusCount[s] = (statusCount[s] || 0) + 1;
   });
 
-  statusChart = new Chart(document.getElementById("statusChart"), {
+  statusChart = new Chart(statusChartCanvas, {
     type: "doughnut",
     data: {
       labels: Object.keys(statusCount),
@@ -125,26 +104,24 @@ function renderCharts() {
     }
   });
 
-  /* Group by ingestion time */
-  const grouped = {};
+  /* Average Slack by Path (SORTED) */
+  const map = {};
   rawData.forEach(d => {
-    grouped[d.ingestion_ts] = grouped[d.ingestion_ts] || [];
-    grouped[d.ingestion_ts].push(Number(d.slack || 0));
+    map[d.id] = map[d.id] || [];
+    map[d.id].push(Number(d.slack));
   });
 
-  const times = Object.keys(grouped).sort();
+  const avgByPath = Object.entries(map)
+    .map(([k, v]) => ({ path: k, avg: v.reduce((a, b) => a + b, 0) / v.length }))
+    .sort((a, b) => a.avg - b.avg);
 
-  /* Average Slack Trend */
-  avgSlackChart = new Chart(document.getElementById("avgSlackChart"), {
+  avgSlackChart = new Chart(avgSlackChartCanvas, {
     type: "line",
     data: {
-      labels: times,
+      labels: avgByPath.map(d => d.path),
       datasets: [{
-        data: times.map(t =>
-          grouped[t].reduce((a, b) => a + b, 0) / grouped[t].length
-        ),
-        borderColor: "#16a34a",
-        backgroundColor: "rgba(22,163,74,0.15)",
+        data: avgByPath.map(d => d.avg),
+        borderColor: "#06b6d4",
         fill: true,
         tension: 0.4
       }]
@@ -153,25 +130,29 @@ function renderCharts() {
   });
 
   /* Violation Trend */
-  violationTrendChart = new Chart(
-    document.getElementById("violationTrendChart"),
-    {
-      type: "line",
-      data: {
-        labels: times,
-        datasets: [{
-          data: times.map(t => grouped[t].filter(v => v < 0).length),
-          borderColor: "#dc2626",
-          backgroundColor: "rgba(220,38,38,0.15)",
-          fill: true,
-          tension: 0.4
-        }]
-      },
-      options: { plugins: { legend: { display: false } } }
-    }
-  );
+  const byTime = {};
+  rawData.forEach(d => {
+    byTime[d.ingestion_ts] = byTime[d.ingestion_ts] || [];
+    byTime[d.ingestion_ts].push(Number(d.slack));
+  });
+
+  const times = Object.keys(byTime).sort();
+
+  violationTrendChart = new Chart(violationTrendChartCanvas, {
+    type: "line",
+    data: {
+      labels: times,
+      datasets: [{
+        data: times.map(t => byTime[t].filter(v => v < 0).length),
+        borderColor: "#dc2626",
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: { plugins: { legend: { display: false } } }
+  });
 }
 
-/* ---------- AUTO REFRESH ---------- */
+/* ---------- INIT ---------- */
 loadData();
 setInterval(loadData, 30000);
