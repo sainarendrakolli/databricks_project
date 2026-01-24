@@ -1,4 +1,4 @@
-let slackChart, statusChart, avgSlackChart, pathSlackChart;
+let slackChart, statusChart, avgSlackChart, violationTrendChart;
 let rawData = [];
 
 /* ---------- HELPERS ---------- */
@@ -66,29 +66,21 @@ function renderTable() {
 
   const columns = Object.keys(rawData[0]);
 
-  let headerRow = "<tr>";
-  columns.forEach(col => {
-    headerRow += `<th>${col}</th>`;
-  });
-  headerRow += "</tr>";
-  head.innerHTML = headerRow;
+  head.innerHTML =
+    "<tr>" + columns.map(c => `<th>${c}</th>`).join("") + "</tr>";
 
   rawData.forEach(d => {
-    let rowHtml = "<tr>";
-
+    let row = "<tr>";
     columns.forEach(col => {
-      let value = d[col] ?? "";
-
+      let val = d[col] ?? "";
       if (col === "timing_status") {
-        const status = normalizeStatus(value);
-        value = `<span class="status ${status}">${status}</span>`;
+        const s = normalizeStatus(val);
+        val = `<span class="status ${s}">${s}</span>`;
       }
-
-      rowHtml += `<td>${value}</td>`;
+      row += `<td>${val}</td>`;
     });
-
-    rowHtml += "</tr>";
-    body.innerHTML += rowHtml;
+    row += "</tr>";
+    body.innerHTML += row;
   });
 }
 
@@ -97,9 +89,9 @@ function renderCharts() {
   if (slackChart) slackChart.destroy();
   if (statusChart) statusChart.destroy();
   if (avgSlackChart) avgSlackChart.destroy();
-  if (pathSlackChart) pathSlackChart.destroy();
+  if (violationTrendChart) violationTrendChart.destroy();
 
-  // Slack Trend
+  /* Slack Trend */
   slackChart = new Chart(document.getElementById("slackChart"), {
     type: "line",
     data: {
@@ -107,7 +99,7 @@ function renderCharts() {
       datasets: [{
         data: rawData.map(d => d.slack),
         borderColor: "#4f46e5",
-        backgroundColor: "rgba(79,70,229,0.12)",
+        backgroundColor: "rgba(79,70,229,0.15)",
         fill: true,
         tension: 0.4
       }]
@@ -115,7 +107,7 @@ function renderCharts() {
     options: { plugins: { legend: { display: false } } }
   });
 
-  // Status Distribution
+  /* Status Distribution */
   const statusCount = {};
   rawData.forEach(d => {
     const s = normalizeStatus(d.timing_status);
@@ -133,44 +125,51 @@ function renderCharts() {
     }
   });
 
-  // Average Slack
-  const avgSlack =
-    rawData.reduce((sum, d) => sum + Number(d.slack || 0), 0) / rawData.length;
+  /* Group by ingestion time */
+  const grouped = {};
+  rawData.forEach(d => {
+    grouped[d.ingestion_ts] = grouped[d.ingestion_ts] || [];
+    grouped[d.ingestion_ts].push(Number(d.slack || 0));
+  });
 
+  const times = Object.keys(grouped).sort();
+
+  /* Average Slack Trend */
   avgSlackChart = new Chart(document.getElementById("avgSlackChart"), {
-    type: "bar",
+    type: "line",
     data: {
-      labels: ["Average Slack"],
+      labels: times,
       datasets: [{
-        data: [avgSlack.toFixed(2)],
-        backgroundColor: avgSlack >= 0 ? "#22c55e" : "#ef4444"
+        data: times.map(t =>
+          grouped[t].reduce((a, b) => a + b, 0) / grouped[t].length
+        ),
+        borderColor: "#16a34a",
+        backgroundColor: "rgba(22,163,74,0.15)",
+        fill: true,
+        tension: 0.4
       }]
     },
-    options: {
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true } }
-    }
+    options: { plugins: { legend: { display: false } } }
   });
 
-  // Path vs Slack
-  pathSlackChart = new Chart(document.getElementById("pathSlackChart"), {
-    type: "scatter",
-    data: {
-      datasets: [{
-        label: "Path Slack",
-        data: rawData.map(d => ({ x: d.id, y: d.slack })),
-        backgroundColor: rawData.map(d =>
-          d.slack < 0 ? "#ef4444" : "#22c55e"
-        )
-      }]
-    },
-    options: {
-      scales: {
-        x: { title: { display: true, text: "Path ID" } },
-        y: { title: { display: true, text: "Slack" } }
-      }
+  /* Violation Trend */
+  violationTrendChart = new Chart(
+    document.getElementById("violationTrendChart"),
+    {
+      type: "line",
+      data: {
+        labels: times,
+        datasets: [{
+          data: times.map(t => grouped[t].filter(v => v < 0).length),
+          borderColor: "#dc2626",
+          backgroundColor: "rgba(220,38,38,0.15)",
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: { plugins: { legend: { display: false } } }
     }
-  });
+  );
 }
 
 /* ---------- AUTO REFRESH ---------- */
