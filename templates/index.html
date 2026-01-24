@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Timing Analysis – Gold Layer View</title>
 
   <style>
     body {
-      font-family: "Segoe UI", Arial, sans-serif;
+      font-family: Arial, sans-serif;
       background: #f4f6f9;
       margin: 0;
       padding: 20px;
@@ -14,31 +14,13 @@
 
     h1 {
       text-align: center;
-      color: #2c3e50;
       margin-bottom: 20px;
-    }
-
-    .container {
-      background: #ffffff;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-
-    .status-box {
-      margin-bottom: 15px;
-      padding: 10px;
-      border-radius: 6px;
-      background: #eef2ff;
-      color: #333;
-      font-size: 14px;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 14px;
+      background: #ffffff;
     }
 
     thead {
@@ -47,38 +29,14 @@
     }
 
     th, td {
-      padding: 10px 12px;
-      border-bottom: 1px solid #e0e0e0;
+      padding: 8px 10px;
+      border: 1px solid #ddd;
       text-align: left;
-      white-space: nowrap;
+      font-size: 14px;
     }
 
-    tbody tr:hover {
-      background: #f1f5fb;
-    }
-
-    .badge {
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 12px;
-      display: inline-block;
-    }
-
-    .badge-green {
-      background: #e8f5e9;
-      color: #2e7d32;
-    }
-
-    .badge-red {
-      background: #fdecea;
-      color: #c62828;
-    }
-
-    .empty {
-      text-align: center;
-      color: #888;
-      padding: 20px;
+    tr:nth-child(even) {
+      background: #f9f9f9;
     }
   </style>
 </head>
@@ -87,16 +45,10 @@
 
   <h1>Timing Analysis – Gold Layer View</h1>
 
-  <div class="container">
-    <div id="statusBox" class="status-box">
-      Fetching data from backend…
-    </div>
-
-    <table>
-      <thead id="tableHead"></thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-  </div>
+  <table>
+    <thead id="tableHead"></thead>
+    <tbody id="tableBody"></tbody>
+  </table>
 
   <script src="script.js"></script>
 </body>

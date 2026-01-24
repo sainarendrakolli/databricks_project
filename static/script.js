@@ -1,97 +1,47 @@
 async function loadData() {
-  const statusBox = document.getElementById("statusBox");
-
   try {
     const response = await fetch("/timing-data");
-
-    if (!response.ok) {
-      statusBox.textContent =
-        "❌ Backend error while fetching /timing-data";
-      return;
-    }
-
     const data = await response.json();
 
-    if (!Array.isArray(data)) {
-      statusBox.textContent =
-        "⚠️ Invalid data format received from backend";
-      renderEmptyTable("Invalid data format");
+    if (!data || data.length === 0) {
+      console.log("No data returned from /timing-data");
       return;
     }
 
-    if (data.length === 0) {
-      statusBox.textContent =
-        "ℹ️ No records returned from Gold layer (table is empty)";
-      renderEmptyTable("No data available");
-      return;
-    }
+    const tableHead = document.getElementById("tableHead");
+    const tableBody = document.getElementById("tableBody");
 
-    statusBox.textContent =
-      `✅ Loaded ${data.length} records from Gold layer`;
-    renderTable(data);
+    tableHead.innerHTML = "";
+    tableBody.innerHTML = "";
 
-  } catch (error) {
-    console.error(error);
-    statusBox.textContent =
-      "❌ Failed to connect to backend API";
-    renderEmptyTable("API not reachable");
-  }
-}
+    // Get ALL column names dynamically from Gold layer
+    const columns = Object.keys(data[0]);
 
-function renderEmptyTable(message) {
-  const tableHead = document.getElementById("tableHead");
-  const tableBody = document.getElementById("tableBody");
-
-  tableHead.innerHTML = "<tr><th>Status</th></tr>";
-  tableBody.innerHTML = `<tr><td class="empty">${message}</td></tr>`;
-}
-
-function renderTable(data) {
-  const tableHead = document.getElementById("tableHead");
-  const tableBody = document.getElementById("tableBody");
-
-  tableHead.innerHTML = "";
-  tableBody.innerHTML = "";
-
-  // 🔹 Dynamically get ALL Gold columns
-  const columns = Object.keys(data[0]);
-
-  // 🔹 Header
-  const headerRow = document.createElement("tr");
-  columns.forEach(col => {
-    const th = document.createElement("th");
-    th.textContent = col.replaceAll("_", " ").toUpperCase();
-    headerRow.appendChild(th);
-  });
-  tableHead.appendChild(headerRow);
-
-  // 🔹 Rows
-  data.forEach(row => {
-    const tr = document.createElement("tr");
-
+    // Build table header
+    let headerRow = "<tr>";
     columns.forEach(col => {
-      const td = document.createElement("td");
-      const value = row[col];
+      headerRow += `<th>${col}</th>`;
+    });
+    headerRow += "</tr>";
+    tableHead.innerHTML = headerRow;
 
-      if (col === "timing_status") {
-        td.innerHTML =
-          value === "VIOLATED"
-            ? `<span class="badge badge-red">VIOLATED</span>`
-            : `<span class="badge badge-green">OK</span>`;
-      } else {
-        td.textContent =
-          value !== null && value !== undefined ? value : "-";
-      }
-
-      tr.appendChild(td);
+    // Build table rows
+    data.forEach(row => {
+      let rowHtml = "<tr>";
+      columns.forEach(col => {
+        rowHtml += `<td>${row[col] !== null && row[col] !== undefined ? row[col] : ""}</td>`;
+      });
+      rowHtml += "</tr>";
+      tableBody.innerHTML += rowHtml;
     });
 
-    tableBody.appendChild(tr);
-  });
+  } catch (error) {
+    console.error("Error fetching data:", error);
+  }
 }
 
 // Initial load
 loadData();
 
-// Auto refresh every 30 seconds
+// Refresh every 30 seconds
 setInterval(loadData, 30000);
