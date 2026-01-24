@@ -94,7 +94,7 @@
     }
 
     canvas {
-      max-height: 220px;
+      max-height: 240px;
     }
 
     /* Table */
@@ -174,15 +174,26 @@
         <h3>Slack Trend</h3>
         <canvas id="slackChart"></canvas>
       </div>
+
       <div class="card">
         <h3>Status Distribution</h3>
         <canvas id="statusChart"></canvas>
+      </div>
+
+      <div class="card">
+        <h3>Average Slack</h3>
+        <canvas id="avgSlackChart"></canvas>
+      </div>
+
+      <div class="card">
+        <h3>Path vs Slack</h3>
+        <canvas id="pathSlackChart"></canvas>
       </div>
     </div>
 
   </div>
 
-  <!-- TABLE (DYNAMIC) -->
+  <!-- TABLE -->
   <div id="tableView" class="hidden">
     <table>
       <thead id="tableHead"></thead>
