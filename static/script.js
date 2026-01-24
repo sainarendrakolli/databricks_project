@@ -1,47 +1,122 @@
-async function loadData() {
-  try {
-    const response = await fetch("/timing-data");
-    const data = await response.json();
+let slackChart, statusChart;
+let rawData = [];
 
-    if (!data || data.length === 0) {
-      console.log("No data returned from /timing-data");
-      return;
-    }
-
-    const tableHead = document.getElementById("tableHead");
-    const tableBody = document.getElementById("tableBody");
-
-    tableHead.innerHTML = "";
-    tableBody.innerHTML = "";
-
-    // Get ALL column names dynamically from Gold layer
-    const columns = Object.keys(data[0]);
-
-    // Build table header
-    let headerRow = "<tr>";
-    columns.forEach(col => {
-      headerRow += `<th>${col}</th>`;
-    });
-    headerRow += "</tr>";
-    tableHead.innerHTML = headerRow;
-
-    // Build table rows
-    data.forEach(row => {
-      let rowHtml = "<tr>";
-      columns.forEach(col => {
-        rowHtml += `<td>${row[col] !== null && row[col] !== undefined ? row[col] : ""}</td>`;
-      });
-      rowHtml += "</tr>";
-      tableBody.innerHTML += rowHtml;
-    });
-
-  } catch (error) {
-    console.error("Error fetching data:", error);
-  }
+/* ---------- HELPERS ---------- */
+function normalizeStatus(status) {
+  return status ? status.trim().toUpperCase() : "";
 }
 
-// Initial load
-loadData();
+/* ---------- TAB HANDLING ---------- */
+function showDashboard() {
+  toggleTabs(0);
+  document.getElementById("dashboard").classList.remove("hidden");
+  document.getElementById("tableView").classList.add("hidden");
+}
 
-// Refresh every 30 seconds
+function showTable() {
+  toggleTabs(1);
+  document.getElementById("dashboard").classList.add("hidden");
+  document.getElementById("tableView").classList.remove("hidden");
+}
+
+function toggleTabs(index) {
+  document.querySelectorAll(".tab").forEach((tab, i) =>
+    tab.classList.toggle("active", i === index)
+  );
+}
+
+/* ---------- DATA LOAD ---------- */
+async function loadData() {
+  const res = await fetch("/timing-data");
+  rawData = await res.json();
+
+  updateKPIs();
+  renderTable();
+  renderCharts();
+}
+
+/* ---------- KPI UPDATE ---------- */
+function updateKPIs() {
+  document.getElementById("totalPaths").innerText = rawData.length;
+
+  const violations = rawData.filter(
+    d => normalizeStatus(d.timing_status) === "VIOLATED"
+  ).length;
+
+  document.getElementById("violations").innerText = violations;
+
+  const avgSlack = rawData.length
+    ? (
+        rawData.reduce((sum, d) => sum + Number(d.slack || 0), 0) / rawData.length
+      ).toFixed(2)
+    : 0;
+
+  document.getElementById("avgSlack").innerText = avgSlack;
+}
+
+/* ---------- TABLE ---------- */
+function renderTable() {
+  const body = document.getElementById("data-body");
+  body.innerHTML = "";
+
+  rawData.forEach(d => {
+    const status = normalizeStatus(d.timing_status);
+
+    body.innerHTML += `
+      <tr>
+        <td>${d.id}</td>
+        <td>${d.begin_clock}</td>
+        <td>${d.end_clock}</td>
+        <td>${d.slack}</td>
+        <td><span class="status ${status}">${status}</span></td>
+        <td>${d.ingestion_ts}</td>
+      </tr>
+    `;
+  });
+}
+
+/* ---------- CHARTS ---------- */
+function renderCharts() {
+  if (slackChart) slackChart.destroy();
+  if (statusChart) statusChart.destroy();
+
+  // Slack Trend
+  slackChart = new Chart(document.getElementById("slackChart"), {
+    type: "line",
+    data: {
+      labels: rawData.map(d => d.id),
+      datasets: [{
+        data: rawData.map(d => d.slack),
+        borderColor: "#4f46e5",
+        backgroundColor: "rgba(79,70,229,0.12)",
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // Status Distribution
+  const statusCount = {};
+  rawData.forEach(d => {
+    const s = normalizeStatus(d.timing_status);
+    statusCount[s] = (statusCount[s] || 0) + 1;
+  });
+
+  statusChart = new Chart(document.getElementById("statusChart"), {
+    type: "doughnut",
+    data: {
+      labels: Object.keys(statusCount),
+      datasets: [{
+        data: Object.values(statusCount),
+        backgroundColor: ["#22c55e", "#ef4444"]
+      }]
+    }
+  });
+}
+
+/* ---------- AUTO REFRESH ---------- */
+loadData();
 setInterval(loadData, 30000);
