@@ -1,11 +1,49 @@
 async function loadData() {
+  const statusBox = document.getElementById("statusBox");
+
   try {
     const response = await fetch("/timing-data");
+
+    if (!response.ok) {
+      statusBox.textContent =
+        "❌ Backend error while fetching /timing-data";
+      return;
+    }
+
     const data = await response.json();
+
+    if (!Array.isArray(data)) {
+      statusBox.textContent =
+        "⚠️ Invalid data format received from backend";
+      renderEmptyTable("Invalid data format");
+      return;
+    }
+
+    if (data.length === 0) {
+      statusBox.textContent =
+        "ℹ️ No records returned from Gold layer (table is empty)";
+      renderEmptyTable("No data available");
+      return;
+    }
+
+    statusBox.textContent =
+      `✅ Loaded ${data.length} records from Gold layer`;
     renderTable(data);
+
   } catch (error) {
-    console.error("Error fetching data:", error);
+    console.error(error);
+    statusBox.textContent =
+      "❌ Failed to connect to backend API";
+    renderEmptyTable("API not reachable");
   }
+}
+
+function renderEmptyTable(message) {
+  const tableHead = document.getElementById("tableHead");
+  const tableBody = document.getElementById("tableBody");
+
+  tableHead.innerHTML = "<tr><th>Status</th></tr>";
+  tableBody.innerHTML = `<tr><td class="empty">${message}</td></tr>`;
 }
 
 function renderTable(data) {
@@ -15,15 +53,10 @@ function renderTable(data) {
   tableHead.innerHTML = "";
   tableBody.innerHTML = "";
 
-  if (!data || data.length === 0) {
-    tableBody.innerHTML = `<tr><td class="empty">No data available</td></tr>`;
-    return;
-  }
-
-  // 🔹 Dynamically extract column names from Gold layer
+  // 🔹 Dynamically get ALL Gold columns
   const columns = Object.keys(data[0]);
 
-  // 🔹 Build table header
+  // 🔹 Header
   const headerRow = document.createElement("tr");
   columns.forEach(col => {
     const th = document.createElement("th");
@@ -32,13 +65,13 @@ function renderTable(data) {
   });
   tableHead.appendChild(headerRow);
 
-  // 🔹 Build table rows
+  // 🔹 Rows
   data.forEach(row => {
     const tr = document.createElement("tr");
 
     columns.forEach(col => {
       const td = document.createElement("td");
-      let value = row[col];
+      const value = row[col];
 
       if (col === "timing_status") {
         td.innerHTML =
@@ -46,7 +79,8 @@ function renderTable(data) {
             ? `<span class="badge badge-red">VIOLATED</span>`
             : `<span class="badge badge-green">OK</span>`;
       } else {
-        td.textContent = value !== null && value !== undefined ? value : "-";
+        td.textContent =
+          value !== null && value !== undefined ? value : "-";
       }
 
       tr.appendChild(td);
@@ -56,8 +90,8 @@ function renderTable(data) {
   });
 }
 
-// 🔁 Initial load
+// Initial load
 loadData();
 
-// 🔁 Auto refresh every 30 seconds
+// Auto refresh every 30 seconds
 setInterval(loadData, 30000);

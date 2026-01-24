@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Timing Analysis Dashboard</title>
+  <title>Timing Analysis – Gold Layer View</title>
 
   <style>
     body {
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      font-family: "Segoe UI", Arial, sans-serif;
       background: #f4f6f9;
       margin: 0;
       padding: 20px;
@@ -25,16 +25,25 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
 
+    .status-box {
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 6px;
+      background: #eef2ff;
+      color: #333;
+      font-size: 14px;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 15px;
+      margin-top: 10px;
       font-size: 14px;
     }
 
     thead {
       background: #2c3e50;
-      color: white;
+      color: #ffffff;
     }
 
     th, td {
@@ -79,6 +88,10 @@
   <h1>Timing Analysis – Gold Layer View</h1>
 
   <div class="container">
+    <div id="statusBox" class="status-box">
+      Fetching data from backend…
+    </div>
+
     <table>
       <thead id="tableHead"></thead>
       <tbody id="tableBody"></tbody>
