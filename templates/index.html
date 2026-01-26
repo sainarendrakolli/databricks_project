@@ -17,23 +17,18 @@
       height: 100vh;
     }
 
-    /* SIDEBAR */
+    /* Sidebar */
     .sidebar {
       width: 220px;
       background: #020617;
       padding: 20px;
     }
 
-    .sidebar h2 {
-      font-size: 18px;
-      margin-bottom: 20px;
-    }
-
     .menu {
       cursor: pointer;
       padding: 12px;
       border-radius: 8px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
 
     .menu.active {
@@ -42,7 +37,7 @@
       font-weight: 600;
     }
 
-    /* MAIN */
+    /* Main */
     .main {
       flex: 1;
       padding: 20px;
@@ -50,10 +45,10 @@
     }
 
     h1 {
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
 
-    /* TWO GRAPHS PER ROW */
+    /* 2 charts per row */
     .grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -62,12 +57,26 @@
 
     .card {
       background: #020617;
-      padding: 18px;
       border-radius: 14px;
       height: 360px;
+      padding: 14px;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #94a3b8;
+      text-align: center;
+    }
+
+    .chart-box {
+      flex: 1;
+      display: flex;
       align-items: center;
+      justify-content: center;
     }
 
     canvas {
@@ -89,28 +98,25 @@
 
 <body>
 
-<!-- SIDEBAR -->
+<!-- Sidebar -->
 <div class="sidebar">
-  <h2>Timing Views</h2>
   <div class="menu active" onclick="showDataPath()">📊 Data Path</div>
   <div class="menu" onclick="showClockPath()">⏱ Clock Path</div>
 </div>
 
-<!-- MAIN -->
+<!-- Main -->
 <div class="main">
 
   <!-- DATA PATH -->
   <div id="dataPathView">
     <h1>Data Path</h1>
     <div class="grid">
-      <div class="card"><canvas id="dataDelayChart"></canvas></div>
-      <div class="card"><canvas id="dataPathContribution"></canvas></div>
-
-      <div class="card"><canvas id="fanoutChart"></canvas></div>
-      <div class="card"><canvas id="dataSlewChart"></canvas></div>
-
-      <div class="card"><canvas id="arrivalReqChart"></canvas></div>
-      <div class="card"><canvas id="dataLoadChart"></canvas></div>
+      <div class="card"><div class="card-title">Data Delay Distribution</div><div class="chart-box"><canvas id="dataDelayChart"></canvas></div></div>
+      <div class="card"><div class="card-title">Path Contribution</div><div class="chart-box"><canvas id="dataPathContribution"></canvas></div></div>
+      <div class="card"><div class="card-title">Data Fanout Distribution</div><div class="chart-box"><canvas id="fanoutChart"></canvas></div></div>
+      <div class="card"><div class="card-title">Data Slew Distribution</div><div class="chart-box"><canvas id="dataSlewChart"></canvas></div></div>
+      <div class="card"><div class="card-title">Arrival vs Required Time</div><div class="chart-box"><canvas id="arrivalReqChart"></canvas></div></div>
+      <div class="card"><div class="card-title">Data Load Distribution</div><div class="chart-box"><canvas id="dataLoadChart"></canvas></div></div>
     </div>
   </div>
 
@@ -118,11 +124,10 @@
   <div id="clockPathView" class="hidden">
     <h1>Clock Path</h1>
     <div class="grid">
-      <div class="card"><canvas id="clockPathContribution"></canvas></div>
-      <div class="card"><canvas id="skewChart"></canvas></div>
-
-      <div class="card"><canvas id="clockSlewChart"></canvas></div>
-      <div class="card"><canvas id="avgSlackChart"></canvas></div>
+      <div class="card"><div class="card-title">Clock Path Contribution</div><div class="chart-box"><canvas id="clockPathContribution"></canvas></div></div>
+      <div class="card"><div class="card-title">Skew by Path Group</div><div class="chart-box"><canvas id="skewChart"></canvas></div></div>
+      <div class="card"><div class="card-title">Clock Slew Distribution</div><div class="chart-box"><canvas id="clockSlewChart"></canvas></div></div>
+      <div class="card"><div class="card-title">Average Slack by Path Group</div><div class="chart-box"><canvas id="avgSlackChart"></canvas></div></div>
     </div>
   </div>
 
