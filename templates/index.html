@@ -11,17 +11,14 @@
 
 <body>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
   <h2>Timing Views</h2>
   <div class="menu active" onclick="showDataPath()">📊 Data Path</div>
   <div class="menu" onclick="showClockPath()">⏱ Clock Path</div>
 </div>
 
-<!-- MAIN -->
 <div class="main">
 
-  <!-- DATA PATH -->
   <section id="dataPathView">
     <h1>Data Path</h1>
     <div class="grid-2">
@@ -34,14 +31,13 @@
     </div>
   </section>
 
-  <!-- CLOCK PATH -->
   <section id="clockPathView" class="hidden">
     <h1>Clock Path</h1>
     <div class="grid-2">
       <div class="card"><h3>Clock Path Contribution</h3><canvas id="clockPathContribution"></canvas></div>
-      <div class="card"><h3>Skew by Path Group</h3><canvas id="skewChart"></canvas></div>
+      <div class="card"><h3>Skew Distribution</h3><canvas id="skewChart"></canvas></div>
       <div class="card"><h3>Clock Slew Distribution</h3><canvas id="clockSlewChart"></canvas></div>
-      <div class="card"><h3>Average Slack by Path Group</h3><canvas id="avgSlackChart"></canvas></div>
+      <div class="card"><h3>Average Slack</h3><canvas id="avgSlackChart"></canvas></div>
     </div>
   </section>
 
