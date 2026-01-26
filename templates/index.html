@@ -6,130 +6,44 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-
-  <style>
-    body {
-      margin: 0;
-      font-family: Inter, sans-serif;
-      background: #0f172a;
-      color: #e5e7eb;
-      display: flex;
-      height: 100vh;
-    }
-
-    /* Sidebar */
-    .sidebar {
-      width: 220px;
-      background: #020617;
-      padding: 20px;
-    }
-
-    .menu {
-      cursor: pointer;
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 12px;
-    }
-
-    .menu.active {
-      background: #1e293b;
-      color: #38bdf8;
-      font-weight: 600;
-    }
-
-    /* Main */
-    .main {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-    }
-
-    h1 {
-      margin-bottom: 18px;
-    }
-
-    /* 2 charts per row */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 22px;
-    }
-
-    .card {
-      background: #020617;
-      border-radius: 14px;
-      height: 360px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .card-title {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: #94a3b8;
-      text-align: center;
-    }
-
-    .chart-box {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    canvas {
-      width: 100% !important;
-      height: 100% !important;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    @media (max-width: 1000px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
 
-<!-- Sidebar -->
+<!-- SIDEBAR -->
 <div class="sidebar">
+  <h2>Timing Views</h2>
   <div class="menu active" onclick="showDataPath()">📊 Data Path</div>
   <div class="menu" onclick="showClockPath()">⏱ Clock Path</div>
 </div>
 
-<!-- Main -->
+<!-- MAIN -->
 <div class="main">
 
   <!-- DATA PATH -->
-  <div id="dataPathView">
+  <section id="dataPathView">
     <h1>Data Path</h1>
-    <div class="grid">
-      <div class="card"><div class="card-title">Data Delay Distribution</div><div class="chart-box"><canvas id="dataDelayChart"></canvas></div></div>
-      <div class="card"><div class="card-title">Path Contribution</div><div class="chart-box"><canvas id="dataPathContribution"></canvas></div></div>
-      <div class="card"><div class="card-title">Data Fanout Distribution</div><div class="chart-box"><canvas id="fanoutChart"></canvas></div></div>
-      <div class="card"><div class="card-title">Data Slew Distribution</div><div class="chart-box"><canvas id="dataSlewChart"></canvas></div></div>
-      <div class="card"><div class="card-title">Arrival vs Required Time</div><div class="chart-box"><canvas id="arrivalReqChart"></canvas></div></div>
-      <div class="card"><div class="card-title">Data Load Distribution</div><div class="chart-box"><canvas id="dataLoadChart"></canvas></div></div>
+    <div class="grid-2">
+      <div class="card"><h3>Data Delay Distribution</h3><canvas id="dataDelayChart"></canvas></div>
+      <div class="card"><h3>Path Contribution</h3><canvas id="dataPathContribution"></canvas></div>
+      <div class="card"><h3>Data Fanout Distribution</h3><canvas id="fanoutChart"></canvas></div>
+      <div class="card"><h3>Data Slew Distribution</h3><canvas id="dataSlewChart"></canvas></div>
+      <div class="card"><h3>Arrival vs Required Time</h3><canvas id="arrivalReqChart"></canvas></div>
+      <div class="card"><h3>Data Load Distribution</h3><canvas id="dataLoadChart"></canvas></div>
     </div>
-  </div>
+  </section>
 
   <!-- CLOCK PATH -->
-  <div id="clockPathView" class="hidden">
+  <section id="clockPathView" class="hidden">
     <h1>Clock Path</h1>
-    <div class="grid">
-      <div class="card"><div class="card-title">Clock Path Contribution</div><div class="chart-box"><canvas id="clockPathContribution"></canvas></div></div>
-      <div class="card"><div class="card-title">Skew by Path Group</div><div class="chart-box"><canvas id="skewChart"></canvas></div></div>
-      <div class="card"><div class="card-title">Clock Slew Distribution</div><div class="chart-box"><canvas id="clockSlewChart"></canvas></div></div>
-      <div class="card"><div class="card-title">Average Slack by Path Group</div><div class="chart-box"><canvas id="avgSlackChart"></canvas></div></div>
+    <div class="grid-2">
+      <div class="card"><h3>Clock Path Contribution</h3><canvas id="clockPathContribution"></canvas></div>
+      <div class="card"><h3>Skew by Path Group</h3><canvas id="skewChart"></canvas></div>
+      <div class="card"><h3>Clock Slew Distribution</h3><canvas id="clockSlewChart"></canvas></div>
+      <div class="card"><h3>Average Slack by Path Group</h3><canvas id="avgSlackChart"></canvas></div>
     </div>
-  </div>
+  </section>
 
 </div>
 
