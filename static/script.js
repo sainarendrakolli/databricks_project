@@ -1,153 +1,137 @@
-let charts = {};
 let rawData = [];
+let charts = [];
 
-/* ---------- LOAD DATA ---------- */
+function showDataPath() {
+  toggleNav(0);
+  document.getElementById("dataPathView").classList.remove("hidden");
+  document.getElementById("clockPathView").classList.add("hidden");
+}
+
+function showClockPath() {
+  toggleNav(1);
+  document.getElementById("dataPathView").classList.add("hidden");
+  document.getElementById("clockPathView").classList.remove("hidden");
+}
+
+function toggleNav(i) {
+  document.querySelectorAll(".nav-item").forEach((n, idx) =>
+    n.classList.toggle("active", idx === i)
+  );
+}
+
 async function loadData() {
   const res = await fetch("/timing-data");
   rawData = await res.json();
-
-  updateKPIs();
   renderDataPathCharts();
   renderClockPathCharts();
 }
 
-/* ---------- KPI ---------- */
-function updateKPIs() {
-  document.getElementById("totalPaths").innerText = rawData.length;
-
-  const violations = rawData.filter(d => Number(d.slack) < 0).length;
-  document.getElementById("violations").innerText = violations;
-
-  const avgSlack =
-    rawData.reduce((s, d) => s + Number(d.slack || 0), 0) / rawData.length || 0;
-
-  document.getElementById("avgSlack").innerText = avgSlack.toFixed(3);
+function destroyCharts() {
+  charts.forEach(c => c.destroy());
+  charts = [];
 }
 
-/* ---------- DATA PATH ---------- */
+/* ================= DATA PATH ================= */
+
 function renderDataPathCharts() {
   destroyCharts();
 
-  charts.dataDelay = new Chart(dataDelayChart, {
-    type: "bar",
-    data: {
-      labels: rawData.map(d => d.path_id),
-      datasets: [{
-        label: "Slack",
-        data: rawData.map(d => d.slack),
-        backgroundColor: "#38bdf8"
-      }]
-    }
-  });
+  const paths = [...new Set(rawData.map(d => d.path_id))];
 
-  const groupCount = {};
-  rawData.forEach(d => {
-    groupCount[d.path_group] = (groupCount[d.path_group] || 0) + 1;
-  });
+  const minDelay = paths.map(p => avg("datapath_delay_min", p));
+  const maxDelay = paths.map(p => avg("datapath_delay_max", p));
+  const avgDelay = paths.map(p => avg("datapath_delay_avg", p));
 
-  charts.pathContribution = new Chart(pathContributionChart, {
-    type: "doughnut",
-    data: {
-      labels: Object.keys(groupCount),
-      datasets: [{
-        data: Object.values(groupCount),
-        backgroundColor: ["#38bdf8", "#22c55e", "#f97316"]
-      }]
-    }
-  });
+  charts.push(bar("dataDelayChart", paths, [
+    ds("Min", minDelay, "#38bdf8"),
+    ds("Max", maxDelay, "#22c55e"),
+    ds("Avg", avgDelay, "#facc15")
+  ]));
 
-  charts.dataFanout = new Chart(dataFanoutChart, {
-    type: "bar",
-    data: {
-      labels: rawData.map(d => d.path_id),
-      datasets: [{
-        label: "Fanout",
-        data: rawData.map(d => d.data_fanout_avg || 0),
-        backgroundColor: "#22c55e"
-      }]
-    }
-  });
+  charts.push(donut("dataPathDonut", rawData.map(d => d.path_group)));
 
-  charts.arrivalReq = new Chart(arrivalVsRequiredChart, {
-    type: "bar",
-    data: {
-      labels: rawData.map(d => d.path_id),
-      datasets: [
-        {
-          label: "Arrival",
-          data: rawData.map(d => d.arrival_time),
-          backgroundColor: "#38bdf8"
-        },
-        {
-          label: "Required",
-          data: rawData.map(d => d.required_time),
-          backgroundColor: "#f97316"
-        }
-      ]
-    }
-  });
+  charts.push(bar("fanoutChart", paths, [
+    ds("Min", paths.map(p => avg("data_fanout_min", p)), "#38bdf8"),
+    ds("Max", paths.map(p => avg("data_fanout_max", p)), "#22c55e"),
+    ds("Avg", paths.map(p => avg("data_fanout_avg", p)), "#facc15")
+  ]));
+
+  charts.push(bar("dataSlewChart", paths, [
+    ds("Min", paths.map(p => avg("data_slew_min", p)), "#38bdf8"),
+    ds("Max", paths.map(p => avg("data_slew_max", p)), "#22c55e"),
+    ds("Avg", paths.map(p => avg("data_slew_avg", p)), "#facc15")
+  ]));
+
+  charts.push(bar("arrivalReqChart", paths, [
+    ds("Arrival", paths.map(p => avg("arrival_time", p)), "#38bdf8"),
+    ds("Required", paths.map(p => avg("required_time", p)), "#f97316")
+  ]));
+
+  charts.push(bar("dataLoadChart", paths, [
+    ds("Min", paths.map(p => avg("data_load_min", p)), "#38bdf8"),
+    ds("Max", paths.map(p => avg("data_load_max", p)), "#22c55e"),
+    ds("Avg", paths.map(p => avg("data_load_avg", p)), "#facc15")
+  ]));
 }
 
-/* ---------- CLOCK PATH ---------- */
+/* ================= CLOCK PATH ================= */
+
 function renderClockPathCharts() {
-  charts.clockSkew = new Chart(clockSkewChart, {
-    type: "line",
-    data: {
-      labels: rawData.map(d => d.path_id),
-      datasets: [{
-        label: "Skew",
-        data: rawData.map(d => d.skew),
-        borderColor: "#38bdf8",
-        fill: false,
-        tension: 0.4
-      }]
-    }
+  const groups = [...new Set(rawData.map(d => d.path_group))];
+
+  charts.push(donut("clockDonut", groups));
+
+  charts.push(bar("clockSlewChart", groups, [
+    ds("Min", groups.map(g => avgGroup("clk_slew_min", g)), "#38bdf8"),
+    ds("Max", groups.map(g => avgGroup("clk_slew_max", g)), "#22c55e"),
+    ds("Avg", groups.map(g => avgGroup("clk_slew_avg", g)), "#facc15")
+  ]));
+
+  charts.push(line("skewChart", groups.map(g => avgGroup("skew", g))));
+  charts.push(line("avgSlackChart", groups.map(g => avgGroup("slack", g))));
+}
+
+/* ================= HELPERS ================= */
+
+function avg(col, path) {
+  const v = rawData.filter(d => d.path_id === path).map(d => +d[col] || 0);
+  return v.reduce((a,b)=>a+b,0) / (v.length || 1);
+}
+
+function avgGroup(col, g) {
+  const v = rawData.filter(d => d.path_group === g).map(d => +d[col] || 0);
+  return v.reduce((a,b)=>a+b,0) / (v.length || 1);
+}
+
+function ds(label, data, color) {
+  return { label, data, backgroundColor: color };
+}
+
+function bar(id, labels, datasets) {
+  return new Chart(document.getElementById(id), {
+    type:"bar",
+    data:{ labels, datasets },
+    options:{ responsive:true, plugins:{legend:{labels:{color:"#fff"}}},
+      scales:{ x:{ticks:{color:"#fff"}}, y:{ticks:{color:"#fff"}} } }
   });
+}
 
-  const avgByPath = rawData
-    .map(d => ({ id: d.path_id, slack: d.slack }))
-    .sort((a, b) => a.slack - b.slack);
-
-  charts.avgSlack = new Chart(avgSlackChart, {
-    type: "line",
-    data: {
-      labels: avgByPath.map(d => d.id),
-      datasets: [{
-        label: "Avg Slack",
-        data: avgByPath.map(d => d.slack),
-        borderColor: "#22c55e",
-        fill: false,
-        tension: 0.4
-      }]
-    }
+function donut(id, values) {
+  const map = {};
+  values.forEach(v => map[v] = (map[v] || 0) + 1);
+  return new Chart(document.getElementById(id), {
+    type:"doughnut",
+    data:{ labels:Object.keys(map), datasets:[{ data:Object.values(map) }] }
   });
 }
 
-/* ---------- NAV ---------- */
-function showDataPath() {
-  document.getElementById("dataPath").classList.remove("hidden");
-  document.getElementById("clockPath").classList.add("hidden");
-  setActive(0);
+function line(id, data) {
+  return new Chart(document.getElementById(id), {
+    type:"line",
+    data:{ labels:data.map((_,i)=>i+1), datasets:[{ data, borderColor:"#38bdf8", fill:false }] }
+  });
 }
 
-function showClockPath() {
-  document.getElementById("dataPath").classList.add("hidden");
-  document.getElementById("clockPath").classList.remove("hidden");
-  setActive(1);
-}
-
-function setActive(index) {
-  document.querySelectorAll(".menu-item").forEach((m, i) =>
-    m.classList.toggle("active", i === index)
-  );
-}
-
-/* ---------- UTIL ---------- */
-function destroyCharts() {
-  Object.values(charts).forEach(c => c && c.destroy());
-  charts = {};
-}
-
-/* ---------- INIT ---------- */
+/* INIT */
 loadData();
 setInterval(loadData, 30000);
