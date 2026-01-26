@@ -1,50 +1,14 @@
-let slackChart, statusChart, avgSlackChart, violationTrendChart;
+let charts = {};
 let rawData = [];
 
-/* ---------- DOM BINDINGS (CRITICAL FIX) ---------- */
-const dashboard = document.getElementById("dashboard");
-const tableView = document.getElementById("tableView");
-
-const slackChartCanvas = document.getElementById("slackChart");
-const statusChartCanvas = document.getElementById("statusChart");
-const avgSlackChartCanvas = document.getElementById("avgSlackChart");
-const violationTrendChartCanvas = document.getElementById("violationTrendChart");
-
-const dataBody = document.getElementById("data-body");
-const tableHead = document.getElementById("tableHead");
-
-/* ---------- HELPERS ---------- */
-function normalizeStatus(status) {
-  return status ? status.trim().toUpperCase() : "";
-}
-
-/* ---------- TAB HANDLING ---------- */
-function showDashboard() {
-  dashboard.classList.remove("hidden");
-  tableView.classList.add("hidden");
-  toggleTabs(0);
-}
-
-function showTable() {
-  dashboard.classList.add("hidden");
-  tableView.classList.remove("hidden");
-  toggleTabs(1);
-}
-
-function toggleTabs(index) {
-  document.querySelectorAll(".tab").forEach((tab, i) =>
-    tab.classList.toggle("active", i === index)
-  );
-}
-
-/* ---------- DATA LOAD ---------- */
+/* ---------- LOAD DATA ---------- */
 async function loadData() {
   const res = await fetch("/timing-data");
   rawData = await res.json();
 
   updateKPIs();
-  renderTable();
-  renderCharts();
+  renderDataPathCharts();
+  renderClockPathCharts();
 }
 
 /* ---------- KPI ---------- */
@@ -54,130 +18,134 @@ function updateKPIs() {
   const violations = rawData.filter(d => Number(d.slack) < 0).length;
   document.getElementById("violations").innerText = violations;
 
-  const avgSlack = rawData.length
-    ? (rawData.reduce((s, d) => s + Number(d.slack || 0), 0) / rawData.length).toFixed(2)
-    : 0;
+  const avgSlack =
+    rawData.reduce((s, d) => s + Number(d.slack || 0), 0) / rawData.length || 0;
 
-  document.getElementById("avgSlack").innerText = avgSlack;
+  document.getElementById("avgSlack").innerText = avgSlack.toFixed(3);
 }
 
-/* ---------- TABLE (ALL COLUMNS FROM GOLD) ---------- */
-function renderTable() {
-  dataBody.innerHTML = "";
-  tableHead.innerHTML = "";
+/* ---------- DATA PATH ---------- */
+function renderDataPathCharts() {
+  destroyCharts();
 
-  if (!rawData.length) return;
-
-  const columns = Object.keys(rawData[0]);
-
-  tableHead.innerHTML =
-    "<tr>" + columns.map(c => `<th>${c}</th>`).join("") + "</tr>";
-
-  rawData.forEach(row => {
-    let tr = "<tr>";
-    columns.forEach(col => {
-      let value = row[col] ?? "";
-      if (col === "timing_status") {
-        value = `<span class="status ${normalizeStatus(value)}">${normalizeStatus(value)}</span>`;
-      }
-      tr += `<td>${value}</td>`;
-    });
-    tr += "</tr>";
-    dataBody.innerHTML += tr;
-  });
-}
-
-/* ---------- CHARTS ---------- */
-function renderCharts() {
-  [slackChart, statusChart, avgSlackChart, violationTrendChart]
-    .forEach(c => c && c.destroy());
-
-  /* Slack vs Path */
-  slackChart = new Chart(slackChartCanvas, {
-    type: "line",
+  charts.dataDelay = new Chart(dataDelayChart, {
+    type: "bar",
     data: {
-      labels: rawData.map(d => d.id),
+      labels: rawData.map(d => d.path_id),
       datasets: [{
+        label: "Slack",
         data: rawData.map(d => d.slack),
-        borderColor: "#4f46e5",
-        backgroundColor: "rgba(79,70,229,0.12)",
-        fill: true,
-        tension: 0.4
-      }]
-    },
-    options: { plugins: { legend: { display: false } } }
-  });
-
-  /* Status Distribution */
-  const statusCount = {};
-  rawData.forEach(d => {
-    const s = normalizeStatus(d.timing_status);
-    statusCount[s] = (statusCount[s] || 0) + 1;
-  });
-
-  statusChart = new Chart(statusChartCanvas, {
-    type: "doughnut",
-    data: {
-      labels: Object.keys(statusCount),
-      datasets: [{
-        data: Object.values(statusCount),
-        backgroundColor: ["#22c55e", "#ef4444"]
+        backgroundColor: "#38bdf8"
       }]
     }
   });
 
-  /* Average Slack by Path (SORTED) */
-  const pathMap = {};
+  const groupCount = {};
   rawData.forEach(d => {
-    pathMap[d.id] = pathMap[d.id] || [];
-    pathMap[d.id].push(Number(d.slack));
+    groupCount[d.path_group] = (groupCount[d.path_group] || 0) + 1;
   });
 
-  const avgByPath = Object.entries(pathMap)
-    .map(([p, v]) => ({
-      path: p,
-      avg: v.reduce((a, b) => a + b, 0) / v.length
-    }))
-    .sort((a, b) => a.avg - b.avg);
+  charts.pathContribution = new Chart(pathContributionChart, {
+    type: "doughnut",
+    data: {
+      labels: Object.keys(groupCount),
+      datasets: [{
+        data: Object.values(groupCount),
+        backgroundColor: ["#38bdf8", "#22c55e", "#f97316"]
+      }]
+    }
+  });
 
-  avgSlackChart = new Chart(avgSlackChartCanvas, {
+  charts.dataFanout = new Chart(dataFanoutChart, {
+    type: "bar",
+    data: {
+      labels: rawData.map(d => d.path_id),
+      datasets: [{
+        label: "Fanout",
+        data: rawData.map(d => d.data_fanout_avg || 0),
+        backgroundColor: "#22c55e"
+      }]
+    }
+  });
+
+  charts.arrivalReq = new Chart(arrivalVsRequiredChart, {
+    type: "bar",
+    data: {
+      labels: rawData.map(d => d.path_id),
+      datasets: [
+        {
+          label: "Arrival",
+          data: rawData.map(d => d.arrival_time),
+          backgroundColor: "#38bdf8"
+        },
+        {
+          label: "Required",
+          data: rawData.map(d => d.required_time),
+          backgroundColor: "#f97316"
+        }
+      ]
+    }
+  });
+}
+
+/* ---------- CLOCK PATH ---------- */
+function renderClockPathCharts() {
+  charts.clockSkew = new Chart(clockSkewChart, {
     type: "line",
     data: {
-      labels: avgByPath.map(d => d.path),
+      labels: rawData.map(d => d.path_id),
       datasets: [{
-        data: avgByPath.map(d => d.avg),
-        borderColor: "#06b6d4",
-        backgroundColor: "rgba(6,182,212,0.15)",
-        fill: true,
+        label: "Skew",
+        data: rawData.map(d => d.skew),
+        borderColor: "#38bdf8",
+        fill: false,
         tension: 0.4
       }]
-    },
-    options: { plugins: { legend: { display: false } } }
+    }
   });
 
-  /* Violation Trend */
-  const timeMap = {};
-  rawData.forEach(d => {
-    timeMap[d.ingestion_ts] = timeMap[d.ingestion_ts] || 0;
-    if (Number(d.slack) < 0) timeMap[d.ingestion_ts]++;
-  });
+  const avgByPath = rawData
+    .map(d => ({ id: d.path_id, slack: d.slack }))
+    .sort((a, b) => a.slack - b.slack);
 
-  const times = Object.keys(timeMap).sort();
-
-  violationTrendChart = new Chart(violationTrendChartCanvas, {
+  charts.avgSlack = new Chart(avgSlackChart, {
     type: "line",
     data: {
-      labels: times,
+      labels: avgByPath.map(d => d.id),
       datasets: [{
-        data: times.map(t => timeMap[t]),
-        borderColor: "#dc2626",
-        backgroundColor: "rgba(220,38,38,0.15)",
-        fill: true,
+        label: "Avg Slack",
+        data: avgByPath.map(d => d.slack),
+        borderColor: "#22c55e",
+        fill: false,
         tension: 0.4
       }]
-    },
-    options: { plugins: { legend: { display: false } } }
+    }
   });
+}
+
+/* ---------- NAV ---------- */
+function showDataPath() {
+  document.getElementById("dataPath").classList.remove("hidden");
+  document.getElementById("clockPath").classList.add("hidden");
+  setActive(0);
+}
+
+function showClockPath() {
+  document.getElementById("dataPath").classList.add("hidden");
+  document.getElementById("clockPath").classList.remove("hidden");
+  setActive(1);
+}
+
+function setActive(index) {
+  document.querySelectorAll(".menu-item").forEach((m, i) =>
+    m.classList.toggle("active", i === index)
+  );
+}
+
+/* ---------- UTIL ---------- */
+function destroyCharts() {
+  Object.values(charts).forEach(c => c && c.destroy());
+  charts = {};
 }
 
 /* ---------- INIT ---------- */

@@ -10,47 +10,52 @@
   <style>
     body {
       margin: 0;
-      font-family: "Inter", sans-serif;
-      background: #f5f7fb;
-      color: #111;
-    }
-
-    header {
-      background: #111827;
-      color: white;
-      padding: 18px 30px;
-      font-size: 20px;
-      font-weight: 700;
-    }
-
-    .tabs {
+      font-family: Inter, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
       display: flex;
-      gap: 25px;
-      padding: 18px 30px;
-      background: white;
-      border-bottom: 1px solid #eee;
     }
 
-    .tab {
+    /* Sidebar */
+    .sidebar {
+      width: 230px;
+      background: #020617;
+      padding: 20px;
+      height: 100vh;
+    }
+
+    .sidebar h2 {
+      color: #38bdf8;
+      margin-bottom: 30px;
+    }
+
+    .menu-item {
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      border-radius: 8px;
       cursor: pointer;
       font-weight: 600;
-      color: #555;
+      color: #cbd5f5;
     }
 
-    .tab.active {
-      color: #4f46e5;
-      border-bottom: 3px solid #4f46e5;
-      padding-bottom: 6px;
+    .menu-item.active,
+    .menu-item:hover {
+      background: #1e293b;
+      color: #38bdf8;
     }
 
-    .container {
+    /* Main */
+    .main {
+      flex: 1;
       padding: 25px;
-      max-width: 1300px;
-      margin: auto;
+      overflow-y: auto;
     }
 
-    .hidden { display: none; }
+    .hidden {
+      display: none;
+    }
 
+    /* KPI */
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -59,22 +64,23 @@
     }
 
     .kpi {
-      background: white;
-      padding: 22px;
-      border-radius: 14px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      background: #020617;
+      padding: 20px;
+      border-radius: 12px;
     }
 
     .kpi h2 {
       margin: 0;
-      font-size: 28px;
+      font-size: 26px;
+      color: #38bdf8;
     }
 
     .kpi span {
       font-size: 13px;
-      color: #666;
+      color: #94a3b8;
     }
 
+    /* Charts */
     .chart-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -82,108 +88,92 @@
     }
 
     .card {
-      background: white;
+      background: #020617;
       padding: 20px;
-      border-radius: 14px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      border-radius: 12px;
     }
 
     canvas {
-      max-height: 240px;
+      max-height: 260px;
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    h3 {
+      margin-top: 0;
+      color: #e5e7eb;
     }
-
-    th {
-      background: #f0f2f8;
-      padding: 14px;
-      font-size: 13px;
-    }
-
-    td {
-      padding: 12px;
-      font-size: 13px;
-      border-bottom: 1px solid #eee;
-    }
-
-    .status {
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-weight: 600;
-      font-size: 12px;
-    }
-
-    .OK { background: #e6f9f0; color: #16a34a; }
-    .VIOLATED { background: #fee2e2; color: #dc2626; }
   </style>
 </head>
 
 <body>
 
-<header>⏱ Timing Analytics</header>
-
-<div class="tabs">
-  <div class="tab active" onclick="showDashboard()">Dashboard</div>
-  <div class="tab" onclick="showTable()">Table</div>
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <h2>Timing View</h2>
+  <div class="menu-item active" onclick="showDataPath()">Data Path</div>
+  <div class="menu-item" onclick="showClockPath()">Clock Path</div>
 </div>
 
-<div class="container">
+<!-- MAIN -->
+<div class="main">
 
-  <!-- DASHBOARD -->
-  <div id="dashboard">
-
-    <div class="kpi-grid">
-      <div class="kpi">
-        <h2 id="totalPaths">0</h2>
-        <span>Total Paths</span>
-      </div>
-      <div class="kpi">
-        <h2 id="violations">0</h2>
-        <span>Violations</span>
-      </div>
-      <div class="kpi">
-        <h2 id="avgSlack">0</h2>
-        <span>Average Slack</span>
-      </div>
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <h2 id="totalPaths">0</h2>
+      <span>Total Paths</span>
     </div>
+    <div class="kpi">
+      <h2 id="violations">0</h2>
+      <span>Violations</span>
+    </div>
+    <div class="kpi">
+      <h2 id="avgSlack">0</h2>
+      <span>Average Slack</span>
+    </div>
+  </div>
+
+  <!-- DATA PATH -->
+  <div id="dataPath">
 
     <div class="chart-grid">
       <div class="card">
-        <h3>Slack Trend</h3>
-        <canvas id="slackChart"></canvas>
+        <h3>Data Delay Distribution</h3>
+        <canvas id="dataDelayChart"></canvas>
       </div>
 
       <div class="card">
-        <h3>Status Distribution</h3>
-        <canvas id="statusChart"></canvas>
+        <h3>Path Contribution</h3>
+        <canvas id="pathContributionChart"></canvas>
+      </div>
+
+      <div class="card">
+        <h3>Data Fanout Distribution</h3>
+        <canvas id="dataFanoutChart"></canvas>
+      </div>
+
+      <div class="card">
+        <h3>Arrival vs Required Time</h3>
+        <canvas id="arrivalVsRequiredChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CLOCK PATH -->
+  <div id="clockPath" class="hidden">
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Clock Skew by Path</h3>
+        <canvas id="clockSkewChart"></canvas>
       </div>
 
       <div class="card">
         <h3>Average Slack by Path</h3>
         <canvas id="avgSlackChart"></canvas>
       </div>
-
-      <div class="card">
-        <h3>Violation Trend</h3>
-        <canvas id="violationTrendChart"></canvas>
-      </div>
     </div>
 
-  </div>
-
-  <!-- TABLE -->
-  <div id="tableView" class="hidden">
-    <table>
-      <thead id="tableHead"></thead>
-      <tbody id="data-body"></tbody>
-    </table>
   </div>
 
 </div>
