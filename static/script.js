@@ -1,7 +1,7 @@
 let charts = [];
 let rawData = [];
 
-/* ---------------- NAV ---------------- */
+/* ================= NAV ================= */
 function showDataPath() {
   document.getElementById("dataPathView").classList.remove("hidden");
   document.getElementById("clockPathView").classList.add("hidden");
@@ -12,7 +12,7 @@ function showClockPath() {
   document.getElementById("clockPathView").classList.remove("hidden");
 }
 
-/* ---------------- HELPERS ---------------- */
+/* ================= HELPERS ================= */
 const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
 
 function destroyCharts() {
@@ -20,7 +20,7 @@ function destroyCharts() {
   charts = [];
 }
 
-function tooltip() {
+function tooltipConfig() {
   return {
     enabled: true,
     backgroundColor: "#020617",
@@ -28,24 +28,21 @@ function tooltip() {
     bodyColor: "#e5e7eb",
     borderColor: "#38bdf8",
     borderWidth: 1,
-    padding: 10,
-    callbacks: {
-      label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}`
-    }
+    padding: 10
   };
 }
 
-function baseOptions(xLabel, yLabel, showX=true) {
+function baseOptions(xLabel, yLabel) {
   return {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: { labels: { color: "#e5e7eb" } },
-      tooltip: tooltip()
+      tooltip: tooltipConfig()
     },
     scales: {
       x: {
-        title: { display: showX, text: xLabel, color:"#94a3b8" },
+        title: { display: true, text: xLabel, color:"#94a3b8" },
         ticks: { color: "#e5e7eb" }
       },
       y: {
@@ -57,15 +54,23 @@ function baseOptions(xLabel, yLabel, showX=true) {
   };
 }
 
-/* ---------------- RENDER ---------------- */
+/* ================= RENDER ================= */
 function render() {
+  if (!rawData.length) return;
   destroyCharts();
 
-  /* ========= DATA PATH ========= */
+  // ✅ DOM BINDING (THIS WAS MISSING)
+  const dataDelayChartEl = document.getElementById("dataDelayChart");
+  const dataPathContributionEl = document.getElementById("dataPathContribution");
+  const fanoutChartEl = document.getElementById("fanoutChart");
+  const dataSlewChartEl = document.getElementById("dataSlewChart");
+  const arrivalReqChartEl = document.getElementById("arrivalReqChart");
+  const dataLoadChartEl = document.getElementById("dataLoadChart");
+
   const paths = [...new Set(rawData.map(d => d.path_id))];
 
-  // 1. Data Delay
-  charts.push(new Chart(dataDelayChart, {
+  /* -------- 1. Data Delay -------- */
+  charts.push(new Chart(dataDelayChartEl, {
     type: "bar",
     data: {
       labels: paths,
@@ -78,31 +83,24 @@ function render() {
     options: baseOptions("Path","Delay (ns)")
   }));
 
-  // 2. Path Contribution (FIXED)
-  const groupCounts = {};
-  rawData.forEach(d => {
-    groupCounts[d.path_group] = (groupCounts[d.path_group] || 0) + 1;
-  });
+  /* -------- 2. Path Contribution -------- */
+  const groupCount = {};
+  rawData.forEach(d => groupCount[d.path_group] = (groupCount[d.path_group]||0)+1);
 
-  charts.push(new Chart(dataPathContribution, {
+  charts.push(new Chart(dataPathContributionEl,{
     type:"doughnut",
     data:{
-      labels:Object.keys(groupCounts),
+      labels:Object.keys(groupCount),
       datasets:[{
-        data:Object.values(groupCounts),
+        data:Object.values(groupCount),
         backgroundColor:["#38bdf8","#22c55e","#facc15","#f97316"]
       }]
     },
-    options:{
-      plugins:{
-        legend:{ display:false },
-        tooltip: tooltip()
-      }
-    }
+    options:{ plugins:{ legend:{ display:false }, tooltip: tooltipConfig() } }
   }));
 
-  // 3. Fanout
-  charts.push(new Chart(fanoutChart,{
+  /* -------- 3. Fanout -------- */
+  charts.push(new Chart(fanoutChartEl,{
     type:"bar",
     data:{
       labels: paths,
@@ -115,8 +113,8 @@ function render() {
     options: baseOptions("Path","Fanout")
   }));
 
-  // 4. Slew
-  charts.push(new Chart(dataSlewChart,{
+  /* -------- 4. Slew -------- */
+  charts.push(new Chart(dataSlewChartEl,{
     type:"bar",
     data:{
       labels: paths,
@@ -129,8 +127,8 @@ function render() {
     options: baseOptions("Path","Slew (ns)")
   }));
 
-  // 5. Arrival vs Required
-  charts.push(new Chart(arrivalReqChart,{
+  /* -------- 5. Arrival vs Required -------- */
+  charts.push(new Chart(arrivalReqChartEl,{
     type:"bar",
     data:{
       labels: paths,
@@ -142,8 +140,8 @@ function render() {
     options: baseOptions("Path","Time (ns)")
   }));
 
-  // 6. Load
-  charts.push(new Chart(dataLoadChart,{
+  /* -------- 6. Load -------- */
+  charts.push(new Chart(dataLoadChartEl,{
     type:"bar",
     data:{
       labels: paths,
@@ -157,8 +155,8 @@ function render() {
   }));
 }
 
-/* ---------------- LOAD ---------------- */
-async function loadData(){
+/* ================= LOAD ================= */
+async function loadData() {
   const r = await fetch("/timing-data");
   rawData = await r.json();
   render();
