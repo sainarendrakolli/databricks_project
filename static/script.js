@@ -1,42 +1,55 @@
 let charts = [];
 let rawData = [];
 
-/* ---------- NAV ---------- */
+/* ---------------- NAV ---------------- */
 function showDataPath() {
   document.getElementById("dataPathView").classList.remove("hidden");
   document.getElementById("clockPathView").classList.add("hidden");
-  setActive(0);
 }
 
 function showClockPath() {
   document.getElementById("dataPathView").classList.add("hidden");
   document.getElementById("clockPathView").classList.remove("hidden");
-  setActive(1);
 }
 
-function setActive(i) {
-  document.querySelectorAll(".menu").forEach((m, idx) =>
-    m.classList.toggle("active", idx === i)
-  );
-}
-
-/* ---------- HELPERS ---------- */
+/* ---------------- HELPERS ---------------- */
 const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+
+function destroyCharts() {
+  charts.forEach(c => c.destroy());
+  charts = [];
+}
+
+function tooltip() {
+  return {
+    enabled: true,
+    backgroundColor: "#020617",
+    titleColor: "#38bdf8",
+    bodyColor: "#e5e7eb",
+    borderColor: "#38bdf8",
+    borderWidth: 1,
+    padding: 10,
+    callbacks: {
+      label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}`
+    }
+  };
+}
 
 function baseOptions(xLabel, yLabel, showX=true) {
   return {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { labels: { color: "#e5e7eb" } }
+      legend: { labels: { color: "#e5e7eb" } },
+      tooltip: tooltip()
     },
     scales: {
       x: {
-        title: { display: showX, text: xLabel },
-        ticks: { display: showX, color: "#e5e7eb" }
+        title: { display: showX, text: xLabel, color:"#94a3b8" },
+        ticks: { color: "#e5e7eb" }
       },
       y: {
-        title: { display: true, text: yLabel },
+        title: { display: true, text: yLabel, color:"#94a3b8" },
         ticks: { color: "#e5e7eb" },
         beginAtZero: true
       }
@@ -44,14 +57,14 @@ function baseOptions(xLabel, yLabel, showX=true) {
   };
 }
 
-/* ---------- RENDER ---------- */
+/* ---------------- RENDER ---------------- */
 function render() {
-  charts.forEach(c => c.destroy());
-  charts = [];
+  destroyCharts();
 
-  /* ===== DATA PATH ===== */
+  /* ========= DATA PATH ========= */
   const paths = [...new Set(rawData.map(d => d.path_id))];
 
+  // 1. Data Delay
   charts.push(new Chart(dataDelayChart, {
     type: "bar",
     data: {
@@ -65,8 +78,11 @@ function render() {
     options: baseOptions("Path","Delay (ns)")
   }));
 
+  // 2. Path Contribution (FIXED)
   const groupCounts = {};
-  rawData.forEach(d => groupCounts[d.path_group] = (groupCounts[d.path_group] || 0) + 1);
+  rawData.forEach(d => {
+    groupCounts[d.path_group] = (groupCounts[d.path_group] || 0) + 1;
+  });
 
   charts.push(new Chart(dataPathContribution, {
     type:"doughnut",
@@ -77,66 +93,72 @@ function render() {
         backgroundColor:["#38bdf8","#22c55e","#facc15","#f97316"]
       }]
     },
-    options:{ plugins:{ legend:{ display:false } } }
+    options:{
+      plugins:{
+        legend:{ display:false },
+        tooltip: tooltip()
+      }
+    }
   }));
 
-  /* ===== CLOCK PATH ===== */
-  const clockData = rawData.filter(d => d.clk_slew_max != null);
-  const idx = clockData.map((_,i)=>i+1);
-
-  charts.push(new Chart(clockPathContribution,{
-    type:"doughnut",
-    data:{
-      labels:["Clock Paths"],
-      datasets:[{ data:[clockData.length], backgroundColor:["#38bdf8"] }]
-    },
-    options:{ plugins:{ legend:{ display:false } } }
-  }));
-
-  charts.push(new Chart(skewChart,{
-    type:"line",
-    data:{
-      labels: idx,
-      datasets:[{
-        data: clockData.map(d=>d.skew),
-        borderColor:"#38bdf8",
-        pointRadius:1,
-        tension:0.25
-      }]
-    },
-    options: baseOptions("", "Skew (ns)", false)
-  }));
-
-  charts.push(new Chart(clockSlewChart,{
+  // 3. Fanout
+  charts.push(new Chart(fanoutChart,{
     type:"bar",
     data:{
-      labels: idx,
+      labels: paths,
       datasets:[
-        { label:"Min", data: clockData.map(d=>d.clk_slew_min), backgroundColor:"#38bdf8" },
-        { label:"Max", data: clockData.map(d=>d.clk_slew_max), backgroundColor:"#22c55e" },
-        { label:"Avg", data: clockData.map(d=>d.clk_slew_avg), backgroundColor:"#facc15" }
+        { label:"Min", data: paths.map(p=>avg(rawData.filter(d=>d.path_id===p).map(d=>d.data_fanout_min))), backgroundColor:"#38bdf8" },
+        { label:"Max", data: paths.map(p=>avg(rawData.filter(d=>d.path_id===p).map(d=>d.data_fanout_max))), backgroundColor:"#22c55e" },
+        { label:"Avg", data: paths.map(p=>avg(rawData.filter(d=>d.path_id===p).map(d=>d.data_fanout_avg))), backgroundColor:"#facc15" }
       ]
     },
-    options: baseOptions("", "Clock Slew (ns)", false)
+    options: baseOptions("Path","Fanout")
   }));
 
-  charts.push(new Chart(avgSlackChart,{
-    type:"line",
+  // 4. Slew
+  charts.push(new Chart(dataSlewChart,{
+    type:"bar",
     data:{
-      labels: idx,
-      datasets:[{
-        data: clockData.map(d=>d.slack),
-        borderColor:"#22c55e",
-        pointRadius:1,
-        tension:0.25
-      }]
+      labels: paths,
+      datasets:[
+        { label:"Min", data: paths.map(p=>avg(rawData.filter(d=>d.path_id===p).map(d=>d.data_slew_min))), backgroundColor:"#38bdf8" },
+        { label:"Max", data: paths.map(p=>avg(rawData.filter(d=>d.path_id===p).map(d=>d.data_slew_max))), backgroundColor:"#22c55e" },
+        { label:"Avg", data: paths.map(p=>avg(rawData.filter(d=>d.path_id===p).map(d=>d.data_slew_avg))), backgroundColor:"#facc15" }
+      ]
     },
-    options: baseOptions("", "Slack (ns)", false)
+    options: baseOptions("Path","Slew (ns)")
+  }));
+
+  // 5. Arrival vs Required
+  charts.push(new Chart(arrivalReqChart,{
+    type:"bar",
+    data:{
+      labels: paths,
+      datasets:[
+        { label:"Arrival", data: paths.map(p=>avg(rawData.filter(d=>d.path_id===p).map(d=>d.arrival_time))), backgroundColor:"#38bdf8" },
+        { label:"Required", data: paths.map(p=>avg(rawData.filter(d=>d.path_id===p).map(d=>d.required_time))), backgroundColor:"#f97316" }
+      ]
+    },
+    options: baseOptions("Path","Time (ns)")
+  }));
+
+  // 6. Load
+  charts.push(new Chart(dataLoadChart,{
+    type:"bar",
+    data:{
+      labels: paths,
+      datasets:[
+        { label:"Min", data: paths.map(p=>avg(rawData.filter(d=>d.path_id===p).map(d=>d.data_load_min))), backgroundColor:"#38bdf8" },
+        { label:"Max", data: paths.map(p=>avg(rawData.filter(d=>d.path_id===p).map(d=>d.data_load_max))), backgroundColor:"#22c55e" },
+        { label:"Avg", data: paths.map(p=>avg(rawData.filter(d=>d.path_id===p).map(d=>d.data_load_avg))), backgroundColor:"#facc15" }
+      ]
+    },
+    options: baseOptions("Path","Load")
   }));
 }
 
-/* ---------- LOAD ---------- */
-async function loadData() {
+/* ---------------- LOAD ---------------- */
+async function loadData(){
   const r = await fetch("/timing-data");
   rawData = await r.json();
   render();
