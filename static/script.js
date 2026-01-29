@@ -14,14 +14,15 @@ function showClockPath() {
   resizeCharts();
 }
 
-/* ================= HELPERS ================= */
-const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+/* ================= UTIL ================= */
+const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0) / arr.length : 0;
 
 function destroyCharts() {
   charts.forEach(c => c.destroy());
   charts = [];
 }
 
+/* Chart.js cannot render inside hidden divs */
 function resizeCharts() {
   setTimeout(() => charts.forEach(c => c.resize()), 150);
 }
@@ -33,7 +34,8 @@ function tooltipConfig() {
     titleColor: "#38bdf8",
     bodyColor: "#e5e7eb",
     borderColor: "#38bdf8",
-    borderWidth: 1
+    borderWidth: 1,
+    padding: 10
   };
 }
 
@@ -46,8 +48,15 @@ function baseOptions(xLabel, yLabel) {
       tooltip: tooltipConfig()
     },
     scales: {
-      x: { title: { display: true, text: xLabel }, ticks:{color:"#e5e7eb"} },
-      y: { title: { display: true, text: yLabel }, ticks:{color:"#e5e7eb"}, beginAtZero:true }
+      x: {
+        title: { display: true, text: xLabel, color: "#94a3b8" },
+        ticks: { color: "#e5e7eb", autoSkip: true }
+      },
+      y: {
+        title: { display: true, text: yLabel, color: "#94a3b8" },
+        ticks: { color: "#e5e7eb" },
+        beginAtZero: true
+      }
     }
   };
 }
@@ -57,79 +66,105 @@ function render() {
   if (!rawData.length) return;
   destroyCharts();
 
+  /* ---------- SPLIT DATA CORRECTLY ---------- */
+  const dataRows = rawData.filter(r => r.path_id !== null);
+  const clockRows = rawData.filter(r =>
+    r.clk_slew_min !== null ||
+    r.clk_slew_max !== null ||
+    r.skew !== null
+  );
+
+  console.log("DataPath rows:", dataRows.length);
+  console.log("ClockPath rows:", clockRows.length);
+
   /* ================= DATA PATH ================= */
-  const paths = [...new Set(rawData.map(d => d.path_id))];
+  const paths = [...new Set(dataRows.map(r => r.path_id))];
 
-  charts.push(new Chart(dataDelayChart, {
-    type:"bar",
-    data:{
-      labels: paths,
-      datasets:[
-        {label:"Min", data:paths.map(p=>avg(rawData.filter(d=>d.path_id===p).map(d=>d.data_delay_min))), backgroundColor:"#38bdf8"},
-        {label:"Max", data:paths.map(p=>avg(rawData.filter(d=>d.path_id===p).map(d=>d.data_delay_max))), backgroundColor:"#22c55e"},
-        {label:"Avg", data:paths.map(p=>avg(rawData.filter(d=>d.path_id===p).map(d=>d.data_delay_avg))), backgroundColor:"#facc15"}
-      ]
-    },
-    options: baseOptions("Path","Delay (ns)")
-  }));
+  charts.push(new Chart(
+    document.getElementById("dataDelayChart"), {
+      type: "bar",
+      data: {
+        labels: paths,
+        datasets: [
+          { label:"Min", backgroundColor:"#38bdf8",
+            data: paths.map(p => avg(dataRows.filter(r=>r.path_id===p).map(r=>r.data_delay_min))) },
+          { label:"Max", backgroundColor:"#22c55e",
+            data: paths.map(p => avg(dataRows.filter(r=>r.path_id===p).map(r=>r.data_delay_max))) },
+          { label:"Avg", backgroundColor:"#facc15",
+            data: paths.map(p => avg(dataRows.filter(r=>r.path_id===p).map(r=>r.data_delay_avg))) }
+        ]
+      },
+      options: baseOptions("Path", "Delay (ns)")
+    }
+  ));
 
-  /* ================= CLOCK PATH (FIXED) ================= */
-  const groups = [...new Set(rawData.map(d => d.path_group))];
+  /* ================= CLOCK PATH ================= */
+  if (!clockRows.length) return;   // 🔥 prevents empty charts
 
-  charts.push(new Chart(clockPathContribution, {
-    type:"doughnut",
-    data:{
-      labels: groups,
-      datasets:[{
-        data: groups.map(g => rawData.filter(d=>d.path_group===g).length),
-        backgroundColor:["#38bdf8","#22c55e","#facc15","#f97316"]
-      }]
-    },
-    options:{ plugins:{ legend:{display:false}, tooltip:tooltipConfig() } }
-  }));
+  const idx = clockRows.map((_, i) => i + 1);
 
-  charts.push(new Chart(skewChart, {
-    type:"line",
-    data:{
-      labels: groups,
-      datasets:[{
-        label:"Avg Skew",
-        data: groups.map(g => avg(rawData.filter(d=>d.path_group===g).map(d=>d.skew))),
-        borderColor:"#38bdf8",
-        tension:0.35,
-        pointRadius:3
-      }]
-    },
-    options: baseOptions("Path Group","Skew (ns)")
-  }));
+  charts.push(new Chart(
+    document.getElementById("clockPathContribution"), {
+      type: "doughnut",
+      data: {
+        labels: ["Clock Paths"],
+        datasets: [{
+          data: [clockRows.length],
+          backgroundColor: ["#38bdf8"]
+        }]
+      },
+      options: { plugins: { legend: { display:false }, tooltip: tooltipConfig() } }
+    }
+  ));
 
-  charts.push(new Chart(clockSlewChart, {
-    type:"bar",
-    data:{
-      labels: groups,
-      datasets:[
-        {label:"Min", data:groups.map(g=>avg(rawData.filter(d=>d.path_group===g).map(d=>d.clk_slew_min))), backgroundColor:"#38bdf8"},
-        {label:"Max", data:groups.map(g=>avg(rawData.filter(d=>d.path_group===g).map(d=>d.clk_slew_max))), backgroundColor:"#22c55e"},
-        {label:"Avg", data:groups.map(g=>avg(rawData.filter(d=>d.path_group===g).map(d=>d.clk_slew_avg))), backgroundColor:"#facc15"}
-      ]
-    },
-    options: baseOptions("Path Group","Clock Slew (ns)")
-  }));
+  charts.push(new Chart(
+    document.getElementById("skewChart"), {
+      type: "line",
+      data: {
+        labels: idx,
+        datasets: [{
+          label: "Skew",
+          data: clockRows.map(r => r.skew),
+          borderColor: "#38bdf8",
+          tension: 0.3,
+          pointRadius: 2
+        }]
+      },
+      options: baseOptions("Clock Index", "Skew (ns)")
+    }
+  ));
 
-  charts.push(new Chart(avgSlackChart, {
-    type:"line",
-    data:{
-      labels: groups,
-      datasets:[{
-        label:"Avg Slack",
-        data: groups.map(g=>avg(rawData.filter(d=>d.path_group===g).map(d=>d.slack))),
-        borderColor:"#22c55e",
-        tension:0.35,
-        pointRadius:3
-      }]
-    },
-    options: baseOptions("Path Group","Slack (ns)")
-  }));
+  charts.push(new Chart(
+    document.getElementById("clockSlewChart"), {
+      type: "bar",
+      data: {
+        labels: idx,
+        datasets: [
+          { label:"Min", backgroundColor:"#38bdf8", data: clockRows.map(r=>r.clk_slew_min) },
+          { label:"Max", backgroundColor:"#22c55e", data: clockRows.map(r=>r.clk_slew_max) },
+          { label:"Avg", backgroundColor:"#facc15", data: clockRows.map(r=>r.clk_slew_avg) }
+        ]
+      },
+      options: baseOptions("Clock Index", "Clock Slew (ns)")
+    }
+  ));
+
+  charts.push(new Chart(
+    document.getElementById("avgSlackChart"), {
+      type: "line",
+      data: {
+        labels: idx,
+        datasets: [{
+          label: "Slack",
+          data: clockRows.map(r => r.slack),
+          borderColor: "#22c55e",
+          tension: 0.3,
+          pointRadius: 2
+        }]
+      },
+      options: baseOptions("Clock Index", "Slack (ns)")
+    }
+  ));
 }
 
 /* ================= LOAD ================= */
