@@ -10,7 +10,7 @@ function showDataPath() {
 
 function showClockPath() {
   document.getElementById("dataPathView").classList.add("hidden");
-  document.getElementById("clockPathView").classList.remove("hidden");
+  document.getElementById("clockPathView").classList.add("hidden");
   redrawCharts();   // 🔥 REQUIRED
 }
 
