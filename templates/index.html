@@ -1,52 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Timing Analytics Dashboard</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timing Analytics Dashboard</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    
+    <style>
+        /* Embedded critical styles to ensure layout works even if style.css is loading */
+        :root { --sidebar-width: 250px; --primary: #2563eb; }
+        body { font-family: 'Inter', sans-serif; margin: 0; display: flex; background: #f8fafc; color: #1e293b; }
+        
+        .sidebar { width: var(--sidebar-width); height: 100vh; background: #1e293b; color: white; position: fixed; padding: 20px 0; }
+        .sidebar h2 { padding: 0 20px; font-size: 1.1rem; margin-bottom: 30px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .menu { padding: 12px 20px; cursor: pointer; transition: 0.2s; border-left: 4px solid transparent; opacity: 0.7; }
+        .menu:hover { background: #334155; opacity: 1; }
+        .menu.active { background: #334155; border-left-color: var(--primary); font-weight: 600; opacity: 1; }
+
+        .main { margin-left: var(--sidebar-width); padding: 40px; width: calc(100% - var(--sidebar-width)); }
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 24px; }
+        
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
+        .card h3 { margin: 0 0 15px 0; font-size: 0.95rem; color: #64748b; font-weight: 600; }
+        
+        .hidden { display: none; }
+        canvas { width: 100% !important; max-height: 320px; }
+        
+        header { margin-bottom: 30px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+        header h1 { margin: 0; font-size: 1.8rem; }
+    </style>
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
-  <h2>Timing Views</h2>
-  <div class="menu active" onclick="showDataPath()">📊 Data Path</div>
-  <div class="menu" onclick="showClockPath()">⏱ Clock Path</div>
+    <h2>Timing Views</h2>
+    <div id="btn-data" class="menu active" onclick="showDataPath()">📊 Data Path</div>
+    <div id="btn-clock" class="menu" onclick="showClockPath()">⏱ Clock Path</div>
 </div>
 
-<!-- MAIN -->
 <div class="main">
 
-  <!-- DATA PATH -->
-  <section id="dataPathView">
-    <h1>Data Path</h1>
-    <div class="grid-2">
-      <div class="card"><h3>Data Delay Distribution</h3><canvas id="dataDelayChart"></canvas></div>
-      <div class="card"><h3>Path Contribution</h3><canvas id="dataPathContribution"></canvas></div>
-      <div class="card"><h3>Data Fanout Distribution</h3><canvas id="fanoutChart"></canvas></div>
-      <div class="card"><h3>Data Slew Distribution</h3><canvas id="dataSlewChart"></canvas></div>
-      <div class="card"><h3>Arrival vs Required Time</h3><canvas id="arrivalReqChart"></canvas></div>
-      <div class="card"><h3>Data Load Distribution</h3><canvas id="dataLoadChart"></canvas></div>
-    </div>
-  </section>
+    <section id="dataPathView">
+        <header>
+            <h1>Data Path Analysis</h1>
+        </header>
+        <div class="grid-2">
+            <div class="card"><h3>Data Delay Distribution (ns)</h3><canvas id="dataDelayChart"></canvas></div>
+            <div class="card"><h3>Path Contribution (%)</h3><canvas id="dataPathContribution"></canvas></div>
+            <div class="card"><h3>Data Fanout Distribution</h3><canvas id="fanoutChart"></canvas></div>
+            <div class="card"><h3>Data Slew Distribution</h3><canvas id="dataSlewChart"></canvas></div>
+            <div class="card"><h3>Arrival vs Required Time</h3><canvas id="arrivalReqChart"></canvas></div>
+            <div class="card"><h3>Data Load Distribution</h3><canvas id="dataLoadChart"></canvas></div>
+        </div>
+    </section>
 
-  <!-- CLOCK PATH -->
-  <section id="clockPathView" class="hidden">
-    <h1>Clock Path</h1>
-    <div class="grid-2">
-      <div class="card"><h3>Clock Path Contribution</h3><canvas id="clockPathContribution"></canvas></div>
-      <div class="card"><h3>Skew Distribution</h3><canvas id="skewChart"></canvas></div>
-      <div class="card"><h3>Clock Slew Distribution</h3><canvas id="clockSlewChart"></canvas></div>
-      <div class="card"><h3>Average Slack</h3><canvas id="avgSlackChart"></canvas></div>
-    </div>
-  </section>
+    <section id="clockPathView" class="hidden">
+        <header>
+            <h1>Clock Path Analysis</h1>
+        </header>
+        <div class="grid-2">
+            <div class="card"><h3>Clock Path Contribution (%)</h3><canvas id="clockPathContribution"></canvas></div>
+            <div class="card"><h3>Skew Distribution (ns)</h3><canvas id="skewChart"></canvas></div>
+            <div class="card"><h3>Clock Slew Distribution</h3><canvas id="clockSlewChart"></canvas></div>
+            <div class="card"><h3>Average Slack (Violations)</h3><canvas id="avgSlackChart"></canvas></div>
+            <div class="card"><h3>Launch vs Capture Latency</h3><canvas id="latencyChart"></canvas></div>
+        </div>
+    </section>
 
 </div>
 
 <script src="/static/script.js"></script>
+
 </body>
 </html>
