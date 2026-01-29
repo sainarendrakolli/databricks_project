@@ -49,14 +49,20 @@ def home(request: Request):
     return HTMLResponse("<h3>API is running</h3>")
 
 # -----------------------
-# API ENDPOINT
+# API ENDPOINT (UPDATED LOGIC)
 # -----------------------
 @app.get("/timing-data")
 def get_timing_data():
+    # MODIFIED QUERY: 
+    # 1. Filters for 'VIOLATION' only.
+    # 2. Creates a 'requires_change' flag for route/constraint issues.
+    # 3. Orders by most critical (requires_change) and then by latest ingestion.
     query = """
-        SELECT *
+        SELECT *,
+               (CASE WHEN route_impact = 1 OR constraint_issue = 1 THEN 1 ELSE 0 END) AS requires_change
         FROM retail_cat.sales.v_gold_timing_dashboard
-        ORDER BY ingestion_ts DESC
+        WHERE timing_status = 'VIOLATION'
+        ORDER BY requires_change DESC, ingestion_ts DESC
         LIMIT 500
     """
 
