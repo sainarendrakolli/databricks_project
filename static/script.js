@@ -71,13 +71,13 @@ function render() {
   if (!rawData.length) return;
   destroyCharts();
 
-  // Filter valid data rows
+  // Validating and filtering data based on CSV structure 
   const dataRows = rawData.filter(r => r.path_id !== null);
   const paths = dataRows.map(r => `Path ${r.path_id}`);
 
   /* ================= DATA PATH VIEW ================= */
 
-  // 1. Data Delay (Min/Max/Avg)
+  // 1. Data Delay (Min/Max/Avg) 
   charts.push(new Chart(document.getElementById("dataDelayChart"), {
     type: "bar",
     data: {
@@ -91,7 +91,7 @@ function render() {
     options: baseOptions("Path ID", "Delay (ns)")
   }));
 
-  // 2. Path Contribution (Stacked Bar)
+  // 2. Path Contribution (Stacked Bar) 
   charts.push(new Chart(document.getElementById("dataPathContribution"), {
     type: "bar",
     data: {
@@ -104,7 +104,7 @@ function render() {
     options: baseOptions("Path ID", "Contribution %", true)
   }));
 
-  // 3. Data Fanout
+  // 3. Data Fanout 
   charts.push(new Chart(document.getElementById("fanoutChart"), {
     type: "bar",
     data: {
@@ -114,7 +114,7 @@ function render() {
     options: baseOptions("Path ID", "Fanout Count")
   }));
 
-  // 4. Data Slew
+  // 4. Data Slew 
   charts.push(new Chart(document.getElementById("dataSlewChart"), {
     type: "line",
     data: {
@@ -124,7 +124,7 @@ function render() {
     options: baseOptions("Path ID", "Slew (ns)")
   }));
 
-  // 5. Arrival vs Required
+  // 5. Arrival vs Required 
   charts.push(new Chart(document.getElementById("arrivalReqChart"), {
     type: "bar",
     data: {
@@ -137,7 +137,7 @@ function render() {
     options: baseOptions("Path ID", "Time (ns)")
   }));
 
-  // 6. Data Load
+  // 6. Data Load 
   charts.push(new Chart(document.getElementById("dataLoadChart"), {
     type: "bar",
     data: {
@@ -149,7 +149,7 @@ function render() {
 
   /* ================= CLOCK PATH VIEW ================= */
 
-  // 7. Clock Path Contribution Doughnut
+  // 7. Clock Path Contribution 
   charts.push(new Chart(document.getElementById("clockPathContribution"), {
     type: "doughnut",
     data: {
@@ -162,7 +162,7 @@ function render() {
     options: { maintainAspectRatio: false, plugins: { tooltip: tooltipConfig() } }
   }));
 
-  // 8. Skew Chart
+  // 8. Skew Chart 
   charts.push(new Chart(document.getElementById("skewChart"), {
     type: "line",
     data: {
@@ -172,7 +172,7 @@ function render() {
     options: baseOptions("Path ID", "Skew (ns)")
   }));
 
-  // 9. Clock Slew (Min/Max/Avg)
+  // 9. Clock Slew (Min/Max/Avg) 
   charts.push(new Chart(document.getElementById("clockSlewChart"), {
     type: "bar",
     data: {
@@ -185,7 +185,7 @@ function render() {
     options: baseOptions("Path ID", "Clock Slew (ns)")
   }));
 
-  // 10. Slack Chart
+  // 10. Slack Chart 
   charts.push(new Chart(document.getElementById("avgSlackChart"), {
     type: "line",
     data: {
@@ -208,4 +208,4 @@ async function loadData() {
 }
 
 window.onload = loadData;
-setInterval(loadData, 60000); // Refresh every minute
+setInterval(loadData, 60000);
