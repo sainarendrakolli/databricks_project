@@ -5,16 +5,16 @@ let rawData = [];
 function showDataPath() {
   document.getElementById("dataPathView").classList.remove("hidden");
   document.getElementById("clockPathView").classList.add("hidden");
-  redrawCharts();
+  resizeCharts();
 }
 
 function showClockPath() {
   document.getElementById("dataPathView").classList.add("hidden");
   document.getElementById("clockPathView").classList.remove("hidden");
-  redrawCharts();
+  resizeCharts();
 }
 
-/* ================= HELPERS ================= */
+/* ================= UTIL ================= */
 const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 
 function destroyCharts() {
@@ -22,16 +22,17 @@ function destroyCharts() {
   charts = [];
 }
 
-function redrawCharts() {
-  setTimeout(() => charts.forEach(c => c.resize()), 150);
+function resizeCharts() {
+  setTimeout(() => charts.forEach(c => c.resize()), 120);
 }
 
-/* ================= VISUAL CONFIG ================= */
+/* ================= CHART OPTIONS ================= */
 function tooltipConfig() {
   return {
-    backgroundColor: "#ffffff",
-    titleColor: "#000000",
-    bodyColor: "#000000",
+    enabled: true,
+    backgroundColor: "#111827",
+    titleColor: "#ffffff",
+    bodyColor: "#ffffff",
     borderColor: "#000000",
     borderWidth: 1,
     padding: 10
@@ -43,39 +44,18 @@ function baseOptions(xLabel, yLabel) {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        labels: {
-          color: "#000000",
-          font: { weight: "600" }
-        }
-      },
+      legend: { labels: { color: "#000000" } },
       tooltip: tooltipConfig()
     },
     scales: {
       x: {
-        title: {
-          display: true,
-          text: xLabel,
-          color: "#000000",
-          font: { weight: "600" }
-        },
-        ticks: {
-          color: "#000000"
-        },
-        grid: { color: "#e5e7eb" }
+        title: { display: true, text: xLabel, color: "#000000" },
+        ticks: { color: "#000000", autoSkip: true }
       },
       y: {
-        title: {
-          display: true,
-          text: yLabel,
-          color: "#000000",
-          font: { weight: "600" }
-        },
-        ticks: {
-          color: "#000000"
-        },
-        beginAtZero: true,
-        grid: { color: "#e5e7eb" }
+        title: { display: true, text: yLabel, color: "#000000" },
+        ticks: { color: "#000000" },
+        beginAtZero: true
       }
     }
   };
@@ -86,138 +66,143 @@ function render() {
   if (!rawData.length) return;
   destroyCharts();
 
+  /* -------- VALID DATA ONLY -------- */
   const rows = rawData.filter(r => r.path_id !== null);
-  const paths = rows.map(r => `Path ${r.path_id}`);
+  if (!rows.length) return;
+
+  const labels = rows.map(r => `Path ${r.path_id}`);
 
   /* ================= DATA PATH ================= */
 
-  // 1. Data Delay (Min / Max / Avg)
-  charts.push(new Chart(document.getElementById("dataDelayChart"), {
+  charts.push(new Chart(dataDelayChart, {
     type: "bar",
     data: {
-      labels: paths,
+      labels,
       datasets: [
-        { label: "Min Delay", backgroundColor: "#2563eb", data: rows.map(r => r.data_delay_min) },
-        { label: "Max Delay", backgroundColor: "#dc2626", data: rows.map(r => r.data_delay_max) },
-        { label: "Avg Delay", backgroundColor: "#16a34a", data: rows.map(r => r.data_delay_avg) }
+        { label: "Min", data: rows.map(r => r.data_delay_min), backgroundColor: "#2563eb" },
+        { label: "Max", data: rows.map(r => r.data_delay_max), backgroundColor: "#dc2626" },
+        { label: "Avg", data: rows.map(r => r.data_delay_avg), backgroundColor: "#16a34a" }
       ]
     },
     options: baseOptions("Path", "Delay (ns)")
   }));
 
-  // 2. Path Contribution (Data vs Clock)
-  charts.push(new Chart(document.getElementById("dataPathContribution"), {
+  charts.push(new Chart(dataPathContribution, {
     type: "bar",
     data: {
-      labels: paths,
+      labels,
       datasets: [
-        { label: "Data Path %", backgroundColor: "#0ea5e9", data: rows.map(r => r.datapath_contri) },
-        { label: "Clock Path %", backgroundColor: "#f97316", data: rows.map(r => r.clkpath_contri) }
+        { label: "Data Path %", data: rows.map(r => r.datapath_contri), backgroundColor: "#0ea5e9" },
+        { label: "Clock Path %", data: rows.map(r => r.clkpath_contri), backgroundColor: "#f97316" }
       ]
     },
-    options: baseOptions("Path", "Contribution (%)")
+    options: baseOptions("Path", "Contribution %")
   }));
 
-  // 3. Fanout
-  charts.push(new Chart(document.getElementById("fanoutChart"), {
+  charts.push(new Chart(fanoutChart, {
     type: "bar",
     data: {
-      labels: paths,
+      labels,
       datasets: [
-        { label: "Max Fanout", backgroundColor: "#7c3aed", data: rows.map(r => r.data_fanout_max) }
+        { label: "Fanout", data: rows.map(r => r.data_fanout_max), backgroundColor: "#7c3aed" }
       ]
     },
     options: baseOptions("Path", "Fanout")
   }));
 
-  // 4. Data Slew
-  charts.push(new Chart(document.getElementById("dataSlewChart"), {
+  charts.push(new Chart(dataSlewChart, {
     type: "line",
     data: {
-      labels: paths,
-      datasets: [{
-        label: "Avg Data Slew",
-        data: rows.map(r => r.data_slew_avg),
-        borderColor: "#dc2626",
-        backgroundColor: "rgba(220,38,38,0.1)",
-        tension: 0.3,
-        fill: true
-      }]
+      labels,
+      datasets: [
+        {
+          label: "Avg Slew",
+          data: rows.map(r => r.data_slew_avg),
+          borderColor: "#db2777",
+          tension: 0.3,
+          pointRadius: 3
+        }
+      ]
     },
     options: baseOptions("Path", "Slew (ns)")
   }));
 
-  // 5. Arrival vs Required
-  charts.push(new Chart(document.getElementById("arrivalReqChart"), {
+  charts.push(new Chart(arrivalReqChart, {
     type: "bar",
     data: {
-      labels: paths,
+      labels,
       datasets: [
-        { label: "Arrival Time", backgroundColor: "#2563eb", data: rows.map(r => r.arrival_time) },
-        { label: "Required Time", backgroundColor: "#16a34a", data: rows.map(r => r.required_time) }
+        { label: "Arrival", data: rows.map(r => r.arrival_time), backgroundColor: "#22c55e" },
+        { label: "Required", data: rows.map(r => r.required_time), backgroundColor: "#64748b" }
       ]
     },
     options: baseOptions("Path", "Time (ns)")
   }));
 
-  // 6. Data Load
-  charts.push(new Chart(document.getElementById("dataLoadChart"), {
+  charts.push(new Chart(dataLoadChart, {
     type: "bar",
     data: {
-      labels: paths,
+      labels,
       datasets: [
-        { label: "Avg Load", backgroundColor: "#0891b2", data: rows.map(r => r.data_load_avg) }
+        { label: "Load", data: rows.map(r => r.data_load_avg), backgroundColor: "#0891b2" }
       ]
     },
-    options: baseOptions("Path", "Load")
+    options: baseOptions("Path", "Load (fF)")
   }));
 
   /* ================= CLOCK PATH ================= */
 
-  // 7. Clock Contribution (Donut)
-  charts.push(new Chart(document.getElementById("clockPathContribution"), {
+  const clkRows = rows.filter(r =>
+    typeof r.clk_slew_min === "number" &&
+    typeof r.clk_slew_max === "number" &&
+    typeof r.skew === "number"
+  );
+
+  // ❗ If no valid clock data → hide whole section
+  if (!clkRows.length) {
+    document.getElementById("clockPathView").classList.add("hidden");
+    return;
+  }
+
+  charts.push(new Chart(clockPathContribution, {
     type: "doughnut",
     data: {
-      labels: ["Clock Contribution", "Data Contribution"],
+      labels: ["Clock %", "Data %"],
       datasets: [{
         data: [
-          avg(rows.map(r => r.clkpath_contri)),
-          avg(rows.map(r => r.datapath_contri))
+          avg(clkRows.map(r => r.clkpath_contri)),
+          avg(clkRows.map(r => r.datapath_contri))
         ],
-        backgroundColor: ["#f97316", "#0ea5e9"]
+        backgroundColor: ["#2563eb", "#9ca3af"]
       }]
     },
-    options: {
-      plugins: {
-        legend: { labels: { color: "#000000" } },
-        tooltip: tooltipConfig()
-      }
-    }
+    options: { plugins: { tooltip: tooltipConfig() } }
   }));
 
-  // 8. Skew
-  charts.push(new Chart(document.getElementById("skewChart"), {
+  charts.push(new Chart(skewChart, {
     type: "line",
     data: {
-      labels: paths,
-      datasets: [{
-        label: "Skew",
-        data: rows.map(r => r.skew),
-        borderColor: "#7c3aed",
-        tension: 0.3
-      }]
+      labels,
+      datasets: [
+        {
+          label: "Skew",
+          data: clkRows.map(r => r.skew),
+          borderColor: "#ef4444",
+          tension: 0.3,
+          pointRadius: 3
+        }
+      ]
     },
     options: baseOptions("Path", "Skew (ns)")
   }));
 
-  // 9. Clock Slew (Min / Max)
-  charts.push(new Chart(document.getElementById("clockSlewChart"), {
+  charts.push(new Chart(clockSlewChart, {
     type: "bar",
     data: {
-      labels: paths,
+      labels,
       datasets: [
-        { label: "Min Clock Slew", backgroundColor: "#2563eb", data: rows.map(r => r.clk_slew_min) },
-        { label: "Max Clock Slew", backgroundColor: "#dc2626", data: rows.map(r => r.clk_slew_max) }
+        { label: "Min", data: clkRows.map(r => r.clk_slew_min), backgroundColor: "#0ea5e9" },
+        { label: "Max", data: clkRows.map(r => r.clk_slew_max), backgroundColor: "#f97316" }
       ]
     },
     options: baseOptions("Path", "Clock Slew (ns)")
@@ -226,13 +211,9 @@ function render() {
 
 /* ================= LOAD ================= */
 async function loadData() {
-  try {
-    const res = await fetch("/timing-data");
-    rawData = await res.json();
-    render();
-  } catch (e) {
-    console.error("Failed to load timing data", e);
-  }
+  const r = await fetch("/timing-data");
+  rawData = await r.json();
+  render();
 }
 
 window.onload = loadData;
